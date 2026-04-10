@@ -1,0 +1,14 @@
+{
+  "name": "claudeos-dashboard",
+  "version": "1.0.0",
+  "description": "ClaudeOS Web Dashboard — AI-Powered Server Management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "ws": "^8.16.0"
+  }
+}

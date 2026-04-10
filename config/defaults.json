@@ -1,0 +1,32 @@
+{
+  "system": {
+    "log_file": "logs/actions.log",
+    "backup_dir": "/backups",
+    "config_backup_dir": "/backups/configs",
+    "supported_os": ["debian", "ubuntu"],
+    "shell": "/bin/bash"
+  },
+  "security": {
+    "ssh_port": 22,
+    "fail2ban_max_retries": 5,
+    "fail2ban_ban_time": 3600,
+    "ufw_default_incoming": "deny",
+    "ufw_default_outgoing": "allow",
+    "password_min_length": 12,
+    "disable_root_ssh": true
+  },
+  "monitoring": {
+    "disk_alert_threshold": 90,
+    "memory_alert_threshold": 90,
+    "cpu_alert_threshold": 95,
+    "log_retention_days": 30
+  },
+  "backup": {
+    "default_schedule": "daily",
+    "retention_days": 30,
+    "compression": "gzip"
+  },
+  "packages": {
+    "essential": ["curl", "wget", "git", "htop", "ufw", "fail2ban", "unzip", "rsync", "nano", "net-tools"]
+  }
+}

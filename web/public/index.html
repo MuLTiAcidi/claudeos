@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en" x-data="dashboard()" x-init="init()" :class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaudeOS Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#e8eef6', 100: '#c5d5e8', 200: '#9fb8d8', 300: '#7a9bc7', 400: '#5e84ba', 500: '#1e3a5f', 600: '#1b3456', 700: '#162c48', 800: '#11233a', 900: '#0c1a2c' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } }
+        .pulse-glow { animation: pulse-glow 2s infinite; }
+        .progress-bar { transition: width 0.8s ease-in-out; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-950 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-primary-500 dark:text-blue-400 tracking-tight">ClaudeOS</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="system.hostname || 'Loading...'"></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 pulse-glow"></div>
+                    <span x-text="'Uptime: ' + formatUptime(system.uptime)">Uptime: --</span>
+                </div>
+                <div class="hidden md:block text-xs text-gray-500 dark:text-gray-400" x-text="system.platform || ''"></div>
+                <button @click="darkMode = !darkMode" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    <svg x-show="darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+                <button @click="refreshAll()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" :class="{ 'animate-spin': loading }">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- Stat Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 fade-in">
+            <!-- CPU -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                        </div>
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">CPU</span>
+                    </div>
+                    <span class="text-xs text-gray-400" x-text="(system.cpu?.cores || '-') + ' cores'"></span>
+                </div>
+                <div class="text-3xl font-bold mb-1" :class="cpuColor(realtimeCpu)" x-text="realtimeCpu + '%'">--%</div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
+                    <div class="h-2.5 rounded-full progress-bar" :class="cpuBarColor(realtimeCpu)" :style="'width: ' + Math.min(realtimeCpu, 100) + '%'"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" x-text="'Load: ' + (system.cpu?.load1?.toFixed(2) || '-') + ' / ' + (system.cpu?.load5?.toFixed(2) || '-') + ' / ' + (system.cpu?.load15?.toFixed(2) || '-')"></p>
+            </div>
+
+            <!-- Memory -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        </div>
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Memory</span>
+                    </div>
+                    <span class="text-xs text-gray-400" x-text="formatBytes(system.memory?.total)"></span>
+                </div>
+                <div class="text-3xl font-bold mb-1" :class="cpuColor(realtimeMemory)" x-text="realtimeMemory + '%'">--%</div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
+                    <div class="h-2.5 rounded-full progress-bar" :class="cpuBarColor(realtimeMemory)" :style="'width: ' + Math.min(realtimeMemory, 100) + '%'"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" x-text="formatBytes(system.memory?.used) + ' / ' + formatBytes(system.memory?.total)"></p>
+            </div>
+
+            <!-- Disk -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+                        </div>
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Disk</span>
+                    </div>
+                    <span class="text-xs text-gray-400" x-text="formatBytes(system.disk?.total)"></span>
+                </div>
+                <div class="text-3xl font-bold mb-1" :class="cpuColor(system.disk?.percent || 0)" x-text="(system.disk?.percent || 0) + '%'">--%</div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
+                    <div class="h-2.5 rounded-full progress-bar" :class="cpuBarColor(system.disk?.percent || 0)" :style="'width: ' + (system.disk?.percent || 0) + '%'"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" x-text="formatBytes(system.disk?.used) + ' / ' + formatBytes(system.disk?.total)"></p>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Services Panel -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 fade-in">
+                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Services</h2>
+                    <span class="text-xs text-gray-400" x-text="services.filter(s => s.active).length + '/' + services.length + ' active'"></span>
+                </div>
+                <div class="p-4 space-y-2 max-h-80 overflow-y-auto">
+                    <template x-if="services.length === 0">
+                        <p class="text-sm text-gray-400 text-center py-4">No services detected</p>
+                    </template>
+                    <template x-for="svc in services" :key="svc.name">
+                        <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-2.5 h-2.5 rounded-full" :class="svc.active ? 'bg-emerald-500' : 'bg-red-400'"></div>
+                                <span class="text-sm font-medium" x-text="svc.name"></span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="svc.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'" x-text="svc.active ? 'Active' : 'Stopped'"></span>
+                                <div class="flex gap-0.5 ml-2">
+                                    <button @click="serviceAction(svc.name, 'restart')" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Restart">
+                                        <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    </button>
+                                    <button x-show="svc.active" @click="serviceAction(svc.name, 'stop')" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Stop">
+                                        <svg class="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                                    </button>
+                                    <button x-show="!svc.active" @click="serviceAction(svc.name, 'start')" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Start">
+                                        <svg class="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Security Panel -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 fade-in">
+                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Security</h2>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <span class="text-sm font-medium">Firewall (UFW)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500" x-text="security.firewall?.rules + ' rules'"></span>
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="security.firewall?.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'" x-text="security.firewall?.active ? 'Active' : 'Inactive'"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            <span class="text-sm font-medium">Fail2Ban</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500" x-text="(security.fail2ban?.banned || 0) + ' banned'"></span>
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="security.fail2ban?.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'" x-text="security.fail2ban?.active ? 'Active' : 'Inactive'"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <span class="text-sm font-medium">Failed SSH Today</span>
+                        </div>
+                        <span class="text-lg font-bold" :class="security.failedSSH > 50 ? 'text-red-500' : security.failedSSH > 10 ? 'text-amber-500' : 'text-emerald-500'" x-text="security.failedSSH || 0"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Panel -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 fade-in">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Recent Alerts</h2>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500" x-text="alerts.length + ' alerts'"></span>
+            </div>
+            <div class="p-4 max-h-64 overflow-y-auto">
+                <template x-if="alerts.length === 0">
+                    <div class="text-center py-6">
+                        <svg class="w-10 h-10 text-emerald-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p class="text-sm text-gray-500">All clear -- no recent alerts</p>
+                    </div>
+                </template>
+                <template x-for="(alert, i) in alerts" :key="i">
+                    <div class="flex items-start gap-3 py-2 px-3 rounded-lg mb-1" :class="alertBg(alert)">
+                        <div class="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" :class="alertDot(alert)"></div>
+                        <span class="text-xs font-mono leading-relaxed break-all" x-text="alert"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Quick Actions + Backups -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Quick Actions -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 fade-in">
+                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Quick Actions</h2>
+                </div>
+                <div class="p-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <button @click="runAction('backup')" :disabled="actionRunning" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all disabled:opacity-50">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        <span class="text-xs font-medium">Backup</span>
+                    </button>
+                    <button @click="runAction('health')" :disabled="actionRunning" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all disabled:opacity-50">
+                        <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        <span class="text-xs font-medium">Health Check</span>
+                    </button>
+                    <button @click="runAction('security')" :disabled="actionRunning" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all disabled:opacity-50">
+                        <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <span class="text-xs font-medium">Security Scan</span>
+                    </button>
+                    <button @click="runAction('update')" :disabled="actionRunning" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all disabled:opacity-50">
+                        <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span class="text-xs font-medium">Check Updates</span>
+                    </button>
+                    <button @click="runAction('report')" :disabled="actionRunning" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all disabled:opacity-50">
+                        <svg class="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span class="text-xs font-medium">Daily Report</span>
+                    </button>
+                    <button @click="runAction('optimize')" :disabled="actionRunning" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-rose-400 dark:hover:border-rose-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all disabled:opacity-50">
+                        <svg class="w-6 h-6 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <span class="text-xs font-medium">Optimize</span>
+                    </button>
+                </div>
+                <!-- Action output -->
+                <div x-show="actionOutput" x-cloak class="px-5 pb-4">
+                    <div class="p-3 bg-gray-900 dark:bg-black rounded-lg">
+                        <pre class="text-xs text-green-400 font-mono whitespace-pre-wrap max-h-40 overflow-y-auto" x-text="actionOutput"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backups -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 fade-in">
+                <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Backups</h2>
+                    <span class="text-xs text-gray-400" x-text="backups.length + ' files'"></span>
+                </div>
+                <div class="p-4 max-h-80 overflow-y-auto">
+                    <template x-if="backups.length === 0">
+                        <p class="text-sm text-gray-400 text-center py-6">No backups found</p>
+                    </template>
+                    <table x-show="backups.length > 0" class="w-full">
+                        <thead>
+                            <tr class="text-xs text-gray-400 uppercase">
+                                <th class="text-left py-2 px-2 font-medium">Name</th>
+                                <th class="text-right py-2 px-2 font-medium">Size</th>
+                                <th class="text-right py-2 px-2 font-medium">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="b in backups" :key="b.name">
+                                <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                    <td class="py-2 px-2 text-xs font-mono truncate max-w-[200px]" x-text="b.name"></td>
+                                    <td class="py-2 px-2 text-xs text-right text-gray-500" x-text="formatBytes(b.size)"></td>
+                                    <td class="py-2 px-2 text-xs text-right text-gray-500" x-text="new Date(b.date).toLocaleDateString()"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-6 text-center">
+        <p class="text-xs text-gray-400">ClaudeOS Dashboard v1.0 -- AI-Powered Server Management</p>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div x-show="toast.show" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-2" class="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium" :class="toast.type === 'success' ? 'bg-emerald-600 text-white' : toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-gray-800 text-white'" x-text="toast.message">
+    </div>
+
+    <script>
+    function dashboard() {
+        return {
+            darkMode: localStorage.getItem('darkMode') === 'true' || window.matchMedia('(prefers-color-scheme: dark)').matches,
+            loading: false,
+            system: {},
+            services: [],
+            security: {},
+            alerts: [],
+            backups: [],
+            realtimeCpu: 0,
+            realtimeMemory: 0,
+            actionRunning: false,
+            actionOutput: '',
+            toast: { show: false, message: '', type: 'info' },
+            ws: null,
+
+            init() {
+                this.$watch('darkMode', val => localStorage.setItem('darkMode', val));
+                this.refreshAll();
+                this.connectWS();
+                setInterval(() => this.refreshAll(), 30000);
+            },
+
+            async refreshAll() {
+                this.loading = true;
+                await Promise.allSettled([
+                    this.fetchSystem(),
+                    this.fetchServices(),
+                    this.fetchSecurity(),
+                    this.fetchAlerts(),
+                    this.fetchBackups()
+                ]);
+                this.loading = false;
+            },
+
+            async fetchSystem() {
+                try {
+                    const r = await fetch('/api/system');
+                    this.system = await r.json();
+                    this.realtimeCpu = this.system.cpu?.percent || 0;
+                    this.realtimeMemory = this.system.memory?.percent || 0;
+                } catch (e) {}
+            },
+
+            async fetchServices() {
+                try { const r = await fetch('/api/services'); this.services = await r.json(); } catch (e) {}
+            },
+
+            async fetchSecurity() {
+                try { const r = await fetch('/api/security'); this.security = await r.json(); } catch (e) {}
+            },
+
+            async fetchAlerts() {
+                try { const r = await fetch('/api/alerts'); this.alerts = await r.json(); } catch (e) {}
+            },
+
+            async fetchBackups() {
+                try { const r = await fetch('/api/backups'); this.backups = await r.json(); } catch (e) {}
+            },
+
+            connectWS() {
+                const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                this.ws = new WebSocket(`${protocol}//${location.host}`);
+                this.ws.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'stats') {
+                        this.realtimeCpu = data.cpu;
+                        this.realtimeMemory = data.memory;
+                    }
+                };
+                this.ws.onclose = () => setTimeout(() => this.connectWS(), 5000);
+                this.ws.onerror = () => this.ws.close();
+            },
+
+            async serviceAction(name, action) {
+                try {
+                    const r = await fetch(`/api/service/${name}/${action}`, { method: 'POST' });
+                    const data = await r.json();
+                    this.showToast(data.success ? `${name} ${action}ed successfully` : `Failed to ${action} ${name}`, data.success ? 'success' : 'error');
+                    this.fetchServices();
+                } catch (e) {
+                    this.showToast('Action failed', 'error');
+                }
+            },
+
+            async runAction(action) {
+                this.actionRunning = true;
+                this.actionOutput = 'Running...';
+                try {
+                    const r = await fetch(`/api/action/${action}`, { method: 'POST' });
+                    const data = await r.json();
+                    this.actionOutput = data.output || 'Done';
+                    this.showToast(data.success ? 'Action completed' : 'Action failed', data.success ? 'success' : 'error');
+                } catch (e) {
+                    this.actionOutput = 'Error: ' + e.message;
+                    this.showToast('Action failed', 'error');
+                }
+                this.actionRunning = false;
+            },
+
+            showToast(message, type = 'info') {
+                this.toast = { show: true, message, type };
+                setTimeout(() => this.toast.show = false, 3000);
+            },
+
+            formatUptime(seconds) {
+                if (!seconds) return '--';
+                const d = Math.floor(seconds / 86400);
+                const h = Math.floor((seconds % 86400) / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                if (d > 0) return `${d}d ${h}h ${m}m`;
+                if (h > 0) return `${h}h ${m}m`;
+                return `${m}m`;
+            },
+
+            formatBytes(bytes) {
+                if (!bytes || bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            },
+
+            cpuColor(val) {
+                if (val >= 90) return 'text-red-500';
+                if (val >= 70) return 'text-amber-500';
+                return 'text-emerald-500';
+            },
+
+            cpuBarColor(val) {
+                if (val >= 90) return 'bg-red-500';
+                if (val >= 70) return 'bg-amber-500';
+                return 'bg-emerald-500';
+            },
+
+            alertBg(alert) {
+                if (alert.includes('[CRITICAL]')) return 'bg-red-50 dark:bg-red-900/20';
+                if (alert.includes('[WARNING]')) return 'bg-amber-50 dark:bg-amber-900/20';
+                return 'bg-blue-50 dark:bg-blue-900/20';
+            },
+
+            alertDot(alert) {
+                if (alert.includes('[CRITICAL]')) return 'bg-red-500';
+                if (alert.includes('[WARNING]')) return 'bg-amber-500';
+                return 'bg-blue-500';
+            }
+        }
+    }
+    </script>
+</body>
+</html>

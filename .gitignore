@@ -1,0 +1,8 @@
+node_modules/
+logs/*.log
+logs/daily-report-*.md
+.DS_Store
+*.swp
+*.swo
+.env
+config/notifications.json

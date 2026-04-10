@@ -1,0 +1,29 @@
+{
+  "servers": [
+    {
+      "name": "example-web",
+      "host": "192.168.1.10",
+      "port": 22,
+      "user": "deploy",
+      "key": "~/.ssh/id_rsa",
+      "role": "web",
+      "os": "ubuntu-22.04",
+      "tags": ["production", "web"],
+      "services": ["nginx", "php-fpm"],
+      "notes": "Main web server"
+    }
+  ],
+  "groups": {
+    "production": ["example-web"],
+    "web": ["example-web"],
+    "database": [],
+    "cache": [],
+    "worker": []
+  },
+  "defaults": {
+    "user": "deploy",
+    "port": 22,
+    "key": "~/.ssh/id_rsa",
+    "timeout": 10
+  }
+}

@@ -10,12 +10,12 @@ Lightweight CLI-only server management. No GUI, minimal resources.
 
 ## Quick Install
 ```bash
-curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 ```
 
 ## Manual Install
 ```bash
-git clone https://github.com/herolind/claudeos.git /opt/claudeos
+git clone https://github.com/MuLTiAcidi/claudeos.git /opt/claudeos
 cd /opt/claudeos
 sudo bash scripts/setup.sh
 sudo bash scripts/install-autopilot.sh

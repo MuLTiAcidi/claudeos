@@ -10,7 +10,7 @@ Browser-based dashboard for managing your server from any device.
 ## Install
 ```bash
 # Install Server Edition first
-curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 
 # Then enable the dashboard
 cd /opt/claudeos/web

@@ -36,10 +36,19 @@ $ claudeos
 
 It handles everything — from installing packages to security hardening, from backups to performance optimization.
 
-## Quick Install
+## Install
+
+### Option 1 — On existing Ubuntu/Debian (recommended)
+```bash
+curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
+```
+
+### Option 2 — Fresh install from ISO (bare metal)
+Download the latest ISO from [Releases](https://github.com/MuLTiAcidi/claudeos/releases), flash to USB, and boot your server from it. Ubuntu + ClaudeOS pre-installed.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash
+# Flash to USB (replace /dev/sdX with your USB drive)
+dd if=claudeos.iso of=/dev/sdX bs=4M status=progress
 ```
 
 That's it. ClaudeOS is ready. Type `claudeos` to start.
@@ -181,6 +190,6 @@ MIT License — use it, modify it, share it.
 
 **Made with Claude Code**
 
-[Report Bug](https://github.com/herolind/claudeos/issues) · [Request Feature](https://github.com/herolind/claudeos/issues)
+[Report Bug](https://github.com/MuLTiAcidi/claudeos/issues) · [Request Feature](https://github.com/MuLTiAcidi/claudeos/issues)
 
 </div>

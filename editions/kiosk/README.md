@@ -10,7 +10,7 @@ Full-screen monitoring dashboard that auto-starts on boot. Perfect for office mo
 
 ## Install
 ```bash
-curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 sudo bash /opt/claudeos/editions/kiosk/install.sh
 ```
 

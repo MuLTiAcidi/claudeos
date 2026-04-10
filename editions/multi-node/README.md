@@ -9,7 +9,7 @@ Manage multiple servers from one central dashboard.
 
 ## Install
 ```bash
-curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 sudo bash /opt/claudeos/editions/multi-node/install.sh
 ```
 

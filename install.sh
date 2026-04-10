@@ -1,6 +1,6 @@
 #!/bin/bash
 # ClaudeOS Universal Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 # Options:
 #   --server       Server Edition (default)
 #   --dashboard    Web Dashboard Edition
@@ -13,7 +13,7 @@ set -e
 
 EDITION="server"
 CLAUDEOS_DIR="/opt/claudeos"
-REPO="https://github.com/herolind/claudeos.git"
+REPO="https://github.com/MuLTiAcidi/claudeos.git"
 
 # Parse args
 for arg in "$@"; do

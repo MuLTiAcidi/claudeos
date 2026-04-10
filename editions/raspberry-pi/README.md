@@ -10,7 +10,7 @@ Ultra-lightweight build optimized for ARM hardware.
 
 ## Install
 ```bash
-curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash -s -- --pi
+curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash -s -- --pi
 ```
 
 ## Optimizations

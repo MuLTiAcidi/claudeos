@@ -1,0 +1,17 @@
+  ╔═══════════════════════════════════════╗
+  ║         ClaudeOS Server               ║
+  ║   AI-Powered System Management        ║
+  ╚═══════════════════════════════════════╝
+
+  Type 'claudeos' to start managing your server
+
+  26 specialist agents ready:
+  System • Security • Docker • Database • Web Server
+  DNS • Mail • Monitoring • Backups • Deployments
+  Multi-Server • Notifications • Compliance & more
+
+  Auto-pilot is running:
+  ✓ Health checks every 5 minutes
+  ✓ Security watchdog every 15 minutes
+  ✓ Daily backups at 2 AM
+  ✓ Daily reports at 7 AM

@@ -1,0 +1,201 @@
+name: Build ClaudeOS ISO
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            live-build \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            mtools \
+            dosfstools
+
+      - name: Configure live-build
+        run: |
+          sudo mkdir -p /build/claudeos-live
+          cd /build/claudeos-live
+
+          sudo lb config \
+            --distribution jammy \
+            --archive-areas "main restricted universe multiverse" \
+            --architectures amd64 \
+            --binary-images iso-hybrid \
+            --iso-application "ClaudeOS" \
+            --iso-publisher "ClaudeOS" \
+            --iso-volume "ClaudeOS" \
+            --debian-installer live \
+            --debian-installer-gui false \
+            --memtest none \
+            --apt-recommends false
+
+          # Package list
+          sudo mkdir -p config/package-lists
+          sudo tee config/package-lists/claudeos.list.chroot << 'EOF'
+          linux-generic
+          grub-pc
+          grub-efi-amd64
+          curl
+          wget
+          git
+          htop
+          nano
+          vim
+          unzip
+          rsync
+          net-tools
+          lsof
+          software-properties-common
+          apt-transport-https
+          ca-certificates
+          gnupg
+          ufw
+          fail2ban
+          unattended-upgrades
+          logrotate
+          openssh-server
+          openssl
+          sysstat
+          procps
+          nginx
+          mariadb-server
+          php-fpm
+          php-mysql
+          php-mbstring
+          php-xml
+          php-curl
+          php-zip
+          php-gd
+          docker.io
+          jq
+          bc
+          screen
+          tmux
+          lvm2
+          msmtp
+          EOF
+
+          # Copy ClaudeOS files into the ISO
+          sudo mkdir -p config/includes.chroot/opt/claudeos
+          sudo cp -r $GITHUB_WORKSPACE/agents config/includes.chroot/opt/claudeos/
+          sudo cp -r $GITHUB_WORKSPACE/scripts config/includes.chroot/opt/claudeos/
+          sudo cp -r $GITHUB_WORKSPACE/config config/includes.chroot/opt/claudeos/
+          sudo cp -r $GITHUB_WORKSPACE/editions config/includes.chroot/opt/claudeos/
+          sudo cp -r $GITHUB_WORKSPACE/web config/includes.chroot/opt/claudeos/
+          sudo cp $GITHUB_WORKSPACE/CLAUDE.md config/includes.chroot/opt/claudeos/
+          sudo cp $GITHUB_WORKSPACE/install.sh config/includes.chroot/opt/claudeos/
+
+          # Make scripts executable
+          sudo chmod +x config/includes.chroot/opt/claudeos/scripts/*.sh
+          sudo chmod +x config/includes.chroot/opt/claudeos/install.sh
+
+          # Custom MOTD
+          sudo mkdir -p config/includes.chroot/etc/update-motd.d
+          sudo tee config/includes.chroot/etc/update-motd.d/00-claudeos << 'MOTDEOF'
+          #!/bin/bash
+          echo ""
+          echo "  ╔═══════════════════════════════════════╗"
+          echo "  ║         ClaudeOS Server               ║"
+          echo "  ║   AI-Powered System Management        ║"
+          echo "  ╚═══════════════════════════════════════╝"
+          echo ""
+          echo "  Type 'claudeos' to start managing"
+          echo ""
+          MOTDEOF
+          sudo chmod +x config/includes.chroot/etc/update-motd.d/00-claudeos
+
+          # Hooks
+          sudo mkdir -p config/hooks/live
+
+          # Install Node.js hook
+          sudo tee config/hooks/live/01-nodejs.hook.chroot << 'HOOKEOF'
+          #!/bin/bash
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
+          npm install -g @anthropic-ai/claude-code
+          HOOKEOF
+          sudo chmod +x config/hooks/live/01-nodejs.hook.chroot
+
+          # ClaudeOS setup hook
+          sudo tee config/hooks/live/02-claudeos.hook.chroot << 'HOOKEOF'
+          #!/bin/bash
+          chmod +x /opt/claudeos/scripts/*.sh
+          ln -sf /opt/claudeos/scripts/claudeos-cli.sh /usr/local/bin/claudeos
+          echo 'alias claudeos="cd /opt/claudeos && claude"' >> /etc/skel/.bashrc
+          mkdir -p /opt/claudeos/logs /backups
+          HOOKEOF
+          sudo chmod +x config/hooks/live/02-claudeos.hook.chroot
+
+          # Security hardening hook
+          sudo tee config/hooks/live/03-security.hook.chroot << 'HOOKEOF'
+          #!/bin/bash
+          sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+          sed -i 's/#MaxAuthTries.*/MaxAuthTries 5/' /etc/ssh/sshd_config
+          cat > /etc/fail2ban/jail.local << 'F2B'
+          [DEFAULT]
+          bantime = 3600
+          findtime = 600
+          maxretry = 5
+          [sshd]
+          enabled = true
+          F2B
+          HOOKEOF
+          sudo chmod +x config/hooks/live/03-security.hook.chroot
+
+      - name: Build ISO
+        run: |
+          cd /build/claudeos-live
+          sudo lb build 2>&1 | tail -30
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: claudeos-iso
+          path: /build/claudeos-live/*.iso
+          retention-days: 30
+
+      - name: Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /build/claudeos-live/*.iso
+          body: |
+            ## ClaudeOS ${{ github.ref_name }}
+
+            ### Installation
+
+            **Option 1 — Install on existing Ubuntu/Debian:**
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
+            ```
+
+            **Option 2 — Fresh install from ISO:**
+            1. Download `claudeos.iso` below
+            2. Flash to USB with [balenaEtcher](https://etcher.balena.io/) or `dd`
+            3. Boot from USB
+            4. Follow the installer
+            5. On first boot, ClaudeOS setup wizard runs
+
+            ### What's Included
+            - 32 AI specialist agents
+            - 6 editions (Server, Web Dashboard, Desktop, Kiosk, Multi-Node, Raspberry Pi)
+            - Autonomous health monitoring, security scanning, backups
+            - Pre-hardened security (UFW, fail2ban, SSH hardening)

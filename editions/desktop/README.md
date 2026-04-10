@@ -10,7 +10,7 @@ Full Linux desktop with ClaudeOS system tray app and desktop integration.
 ## Install
 ```bash
 # Install on existing Ubuntu Desktop
-curl -fsSL https://raw.githubusercontent.com/herolind/claudeos/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 sudo bash /opt/claudeos/editions/desktop/install.sh
 ```
 

@@ -44,12 +44,23 @@ curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh
 ```
 
 ### Option 2 — Fresh install from ISO (bare metal)
-Download the latest ISO from [Releases](https://github.com/MuLTiAcidi/claudeos/releases), flash to USB, and boot your server from it. Ubuntu + ClaudeOS pre-installed.
+Download the latest ISO from [Releases](https://github.com/MuLTiAcidi/claudeos/releases), or build it yourself:
+
+```bash
+# Build ISO (requires Docker on an amd64 Linux machine)
+git clone https://github.com/MuLTiAcidi/claudeos.git
+cd claudeos/iso-builder
+bash build-in-docker.sh
+# Output: output/claudeos.iso
+```
 
 ```bash
 # Flash to USB (replace /dev/sdX with your USB drive)
 dd if=claudeos.iso of=/dev/sdX bs=4M status=progress
+# Or use balenaEtcher (GUI tool)
 ```
+
+Boot from USB → Install → On first boot, ClaudeOS setup wizard runs automatically.
 
 That's it. ClaudeOS is ready. Type `claudeos` to start.
 

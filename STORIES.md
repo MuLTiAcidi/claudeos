@@ -128,6 +128,109 @@ This is the exact workflow a paid pentester would charge $500-$2000 for a small 
 
 ---
 
+## 2026-04-11 — Custom Rootkit, Failed Classic Detection, Real Fix Shipped
+
+> *"i want another demo but this time i want somthing more hardcore"*
+> — Maintainer
+
+We built a real **LD_PRELOAD rootkit** in C from scratch on a test box, watched the classic Linux defender techniques completely fail to detect it, found exactly why, and shipped a fix to the public `backdoor-hunter` agent in the same session.
+
+### What we built
+
+A **userspace rootkit** as a shared library that hooks `readdir()` and `readdir64()` — the libc functions that every directory listing tool ultimately calls.
+
+```
+81 lines of C
+gcc -shared -fPIC -o libhide.so libhide.c -ldl
+echo /tmp/libhide.so > /etc/ld.so.preload
+```
+
+That's the entire installation. Three commands. Once `/etc/ld.so.preload` points to our library, **every program loaded after that point** is silently linked against our shared object, and our hooked `readdir` functions intercept directory listings.
+
+The library hides:
+- **Files** whose name contains a magic prefix (configurable)
+- **Processes** whose `/proc/PID/comm` or `/proc/PID/cmdline` contains the magic prefix
+
+### What happened when we ran it
+
+```bash
+# BEFORE rootkit
+$ ps aux | grep TEST_HIDDEN_BACKDOOR
+root  8435  ...  TEST_HIDDEN_BACKDOOR 999999
+
+$ ls /tmp/rootkit-demo/
+TEST_HIDDEN_secret.txt   libhide.c   libhide.so
+
+# Install: 1 line
+$ echo /tmp/rootkit-demo/libhide.so > /etc/ld.so.preload
+
+# AFTER rootkit
+$ ps aux | grep TEST_HIDDEN_BACKDOOR
+(nothing)
+
+$ ls /tmp/rootkit-demo/
+libhide.c   libhide.so
+
+$ cat /tmp/rootkit-demo/TEST_HIDDEN_secret.txt
+this is a secret file we are hiding from ls   ← still works! file is there.
+
+$ kill -0 8435 && echo alive
+alive   ← process still running, just invisible
+```
+
+The file existed. The process was running. `ps`, `ls`, `find`, `pgrep` — all blind. **Real rootkit behavior in 81 lines of C.**
+
+### Then we tried to detect it
+
+We ran the kind of detection a defender would reach for first:
+
+| Detection | Verdict |
+|---|---|
+| **Compare `ps -e` PIDs to `ls /proc` PIDs** (the classic technique) | ❌ **FOOLED** — both tools use libc `readdir()`, both hit our hook, the diff returns 0 |
+| **Read `/etc/ld.so.preload`** | ✅ Caught it — the file path doesn't match our magic prefix so `cat` reads it normally |
+| **Scan `/proc/*/maps` for suspicious `.so` paths** | ✅ Caught every process loaded after install (sshd, bash, etc.) |
+
+**The discovery: the classic ps-vs-/proc trick is completely broken against readdir-hooking rootkits.** Both `ps` and `ls /proc` end up calling the same hooked function, so they agree on a list that's both wrong in identical ways. The defender thinks they're cross-checking; they're actually asking the same liar twice.
+
+### The fix we shipped
+
+The existing `backdoor-hunter` agent only had a quiet `cat /etc/ld.so.preload` check. We replaced it with **three layers of detection**:
+
+1. **`/etc/ld.so.preload` non-empty** → flagged as `[🚨 CRITICAL]` with file metadata, `file(1)` output, and the resolved library path. Highest-confidence signal — almost no legitimate reason to have anything in this file on a normal server.
+
+2. **`/proc/*/maps` scan** for `.so` files in non-standard paths (`/tmp`, `/var/tmp`, `/dev/shm`, `/home/*/.cache`). Bypasses readdir hooks entirely because we're reading file CONTENTS, not enumerating directories. Reports the exact PID, comm, and map line.
+
+3. **Environment + persistence locations** (existing — kept). `/etc/environment`, `/etc/profile`, `profile.d`, `.bashrc`.
+
+The agent now has an explicit warning at the top of the LD_PRELOAD section explaining why the classic ps-vs-/proc technique fails — so future contributors don't try to add it back as the "main" detection method.
+
+**Total time from "let's build a rootkit" to "fix pushed to GitHub":** ~15 minutes.
+
+### Why this matters
+
+This is the **community-driven loop working in real time**:
+
+1. Build a real attack
+2. Try to detect it with our own tooling
+3. Notice the tooling is wrong
+4. Understand WHY it's wrong (the technique itself, not just an implementation bug)
+5. Ship a better detection
+6. Document the discovery so future defenders learn from it
+
+ClaudeOS gets sharper not because we sit and theorize, but because we run it against real adversarial scenarios and watch it fail. Every failure is the next commit.
+
+### The commit
+
+`8c73c2f` — `fix(backdoor-hunter): improve LD_PRELOAD rootkit detection`
+
+### What this story does NOT mean
+
+- It does NOT mean LD_PRELOAD rootkits are easy to detect in general. We caught THIS one because we knew exactly what to look for. A more sophisticated rootkit could hide its own `/etc/ld.so.preload` entry and its own `/proc/*/maps` traces. The detection arms race is endless.
+- It does NOT mean ClaudeOS catches every rootkit in the wild. It catches **this class** of rootkit reliably now. There are kernel-level rootkits, eBPF rootkits, syscall-table-hooking rootkits, and many more. Each is its own playbook.
+- It DOES mean: the loop works, the agents improve, and the next defender hitting an LD_PRELOAD rootkit on their box will get a **clear, loud, accurate alert** because we ran into the same problem first and fixed it for them.
+
+---
+
 
 
 1. Open an issue: https://github.com/MuLTiAcidi/claudeos/issues/new

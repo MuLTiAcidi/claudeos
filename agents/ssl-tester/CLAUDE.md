@@ -108,17 +108,46 @@ echo | openssl s_client -connect target.com:443 -servername target.com -tls1 2>&
 echo | openssl s_client -connect target.com:443 -servername target.com -ssl3 2>&1 | head -5
 
 # Automated protocol version check
+#
+# CRITICAL: Do NOT grep for "CONNECTED" — that's the TCP-level connection
+# which always appears BEFORE the TLS handshake, even when TLS fails.
+# A real TLS handshake produces a line starting with "New, TLSv..." which
+# we use as the canonical "is this version actually supported" indicator.
 echo "=== Protocol Version Support ==="
-for proto in -tls1_3 -tls1_2 -tls1_1 -tls1 -ssl3; do
-  result=$(echo | openssl s_client -connect target.com:443 -servername target.com $proto 2>&1)
-  if echo "$result" | grep -q "CONNECTED"; then
-    version=$(echo "$result" | grep "Protocol" | awk '{print $NF}')
-    echo "$proto: SUPPORTED ($version)"
+for proto in tls1_3 tls1_2 tls1_1 tls1 ssl3; do
+  result=$(echo Q | openssl s_client -connect target.com:443 -servername target.com -$proto 2>&1)
+  # Real handshake leaves: "New, TLSv1.X, Cipher is XXX"  (and NOT "Cipher is (NONE)")
+  newline=$(echo "$result" | grep -E "^New, (TLS|SSL)v" | head -1)
+  if [ -n "$newline" ] && ! echo "$newline" | grep -q "Cipher is (NONE)"; then
+    # Extract cipher from the "New, ..." line (works for TLS 1.0/1.1/1.2/1.3)
+    cipher=$(echo "$newline" | sed 's/.*Cipher is //')
+    echo "  $proto: SUPPORTED ($cipher)"
   else
-    echo "$proto: NOT SUPPORTED (good if deprecated)"
+    echo "  $proto: NOT SUPPORTED (good if deprecated)"
   fi
 done
 ```
+
+### Cross-Verify with curl (more reliable on some systems)
+
+```bash
+# curl honors --tlsv1.X and --tls-max — pinning both proves a version is enabled
+for v in 1.0 1.1 1.2 1.3; do
+  if curl -sI --max-time 5 --tls-max $v --tlsv$v https://target.com >/dev/null 2>&1; then
+    echo "  TLS $v: SUPPORTED"
+  else
+    echo "  TLS $v: BLOCKED"
+  fi
+done
+```
+
+### Why this matters
+
+When auditing TLS, false positives are dangerous. The old `grep CONNECTED`
+check incorrectly reported TLS 1.0 and 1.1 as "supported" on servers that
+had them properly disabled, because openssl prints "CONNECTED(00000003)"
+for the TCP connection BEFORE attempting the TLS handshake. Always validate
+against post-handshake markers like `New, TLSv...` or `Protocol  : TLSv...`.
 
 ---
 
@@ -419,11 +448,13 @@ echo | openssl s_client -connect "${TARGET}:${PORT}" -servername "$TARGET" 2>/de
 echo "" | tee -a "$REPORT"
 
 # Protocol versions
+# Reliable detection: only post-handshake "New, TLSv..." line proves a real handshake
 echo "--- Protocol Support ---" | tee -a "$REPORT"
-for proto in -tls1_3 -tls1_2 -tls1_1 -tls1; do
-  result=$(echo | openssl s_client -connect "${TARGET}:${PORT}" -servername "$TARGET" $proto 2>&1)
-  if echo "$result" | grep -q "Cipher is" && ! echo "$result" | grep -q "Cipher is (NONE)"; then
-    echo "$proto: SUPPORTED" | tee -a "$REPORT"
+for proto in tls1_3 tls1_2 tls1_1 tls1; do
+  result=$(echo Q | openssl s_client -connect "${TARGET}:${PORT}" -servername "$TARGET" -$proto 2>&1)
+  if echo "$result" | grep -qE "^New, TLSv[0-9.]+, Cipher is " && ! echo "$result" | grep -q "Cipher is (NONE)"; then
+    cipher=$(echo "$result" | grep -oE "Cipher\s*:\s*\S+" | awk '{print $NF}')
+    echo "$proto: SUPPORTED ($cipher)" | tee -a "$REPORT"
   else
     echo "$proto: NOT SUPPORTED" | tee -a "$REPORT"
   fi

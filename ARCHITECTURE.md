@@ -38,7 +38,7 @@ There is **no daemon, no message bus, no IPC**. Every "agent" is a Markdown file
 │              └──────────────────────────┘                        │
 │                                                                  │
 │  • Reads your request                                            │
-│  • Knows about all 231 specialist agents                         │
+│  • Knows about all 232 specialist agents                         │
 │  • Picks which agent(s) to invoke                                │
 │  • Coordinates multi-agent workflows                             │
 │  • Asks for confirmation before destructive actions              │
@@ -59,7 +59,7 @@ There is **no daemon, no message bus, no IPC**. Every "agent" is a Markdown file
 │  │  recon work      │ │  CVE scanning    │ │  pro reports     │  │
 │  └──────────────────┘ └──────────────────┘ └──────────────────┘  │
 │                                                                  │
-│            … 231 specialist playbooks total …                    │
+│            … 232 specialist playbooks total …                    │
 │                                                                  │
 │  Each playbook contains:                                         │
 │  • Safety rules                                                  │
@@ -107,7 +107,7 @@ You. The human typing requests in plain English. You don't need to know which ag
 
 The "brain" of ClaudeOS. This is a single Markdown file at the root of the project that defines:
 - Who ClaudeOS is and how it should behave
-- The full directory of all 231 specialist agents
+- The full directory of all 232 specialist agents
 - How to pick agents for different tasks
 - Multi-agent workflow patterns
 - Safety rules and authorization checks
@@ -262,12 +262,12 @@ User: *"My server is down, fix it"*
 ├── README.md                    # User-facing docs
 ├── ARCHITECTURE.md              # This file
 │
-├── agents/                      # Layer 3: 231 specialists
+├── agents/                      # Layer 3: 232 specialists
 │   ├── vulnerability-scanner/
 │   │   └── CLAUDE.md           # Specialist playbook
 │   ├── jwt-hunter/
 │   │   └── CLAUDE.md
-│   └── ... (231 agents)
+│   └── ... (232 agents)
 │
 ├── config/                      # Configuration
 │   ├── defaults.json
@@ -423,6 +423,6 @@ That simplicity is the design. It makes ClaudeOS:
 - **Auditable** — read any file to know what it does
 - **Hackable** — add or modify agents in seconds
 - **Trustworthy** — nothing runs in the background without your knowledge
-- **Powerful** — 231 specialists at your fingertips with one natural language interface
+- **Powerful** — 232 specialists at your fingertips with one natural language interface
 
 That's the whole architecture.

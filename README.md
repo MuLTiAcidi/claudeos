@@ -99,14 +99,14 @@ ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hid
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
 │  • Reads your request                                   │
-│  • Picks the right agent(s) from 231 specialists        │
+│  • Picks the right agent(s) from 232 specialists        │
 │  • Coordinates multi-agent workflows                    │
 │  • Verifies authorization for offensive agents          │
 └────────────────────┬────────────────────────────────────┘
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 3: SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)  │
-│  • 231 expert playbooks with real commands              │
+│  • 232 expert playbooks with real commands              │
 │  • Each one is just a Markdown file                     │
 │  • Loaded on demand by the orchestrator                 │
 └────────────────────┬────────────────────────────────────┘
@@ -278,9 +278,9 @@ Testing systems without authorization is illegal almost everywhere. **You are re
 
 ---
 
-## 231 Specialist AI Agents
+## 232 Specialist AI Agents
 
-ClaudeOS ships with **231 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
+ClaudeOS ships with **232 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
 
 <details>
 <summary><b>Core System (9 agents)</b></summary>
@@ -297,13 +297,14 @@ ClaudeOS ships with **231 specialized AI agents** across 17 categories. Every ag
 </details>
 
 <details>
-<summary><b>Infrastructure (5 agents)</b></summary>
+<summary><b>Infrastructure (6 agents)</b></summary>
 
 - **Docker Manager** — Containers, compose, images, volumes
 - **Database Agent** — MySQL/PostgreSQL tuning, queries, replication
 - **Web Server Agent** — Nginx/Apache vhosts, SSL, performance
 - **DNS Manager** — DNS zones, records, Cloudflare/Route53
 - **Mail Server** — Postfix/Dovecot, spam, DKIM/SPF/DMARC
+- **WHMCS Doctor** — WHMCS incident response: stuck crons, metadata locks, log table pruning, email queue diagnosis
 </details>
 
 <details>

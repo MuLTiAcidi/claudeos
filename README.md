@@ -75,7 +75,9 @@ That's it. ClaudeOS is ready. Type `claudeos` to start.
 | **Multi-Node** | Managing multiple servers | `sudo bash install.sh --multi-node` |
 | **Raspberry Pi** | ARM boards, home servers | `sudo bash install.sh --pi` |
 
-## 32 Specialist AI Agents
+## 182 Specialist AI Agents
+
+ClaudeOS ships with **182 specialized AI agents** across 16 categories. Every agent contains real working commands — no simulations.
 
 <details>
 <summary><b>Core System (9 agents)</b></summary>
@@ -129,7 +131,7 @@ That's it. ClaudeOS is ready. Type `claudeos` to start.
 </details>
 
 <details>
-<summary><b>Advanced (6 agents)</b></summary>
+<summary><b>Advanced Operations (6 agents)</b></summary>
 
 - **Firewall Visualizer** — Map rules, detect conflicts
 - **Crontab Auditor** — Find dead jobs, optimize scheduling
@@ -137,6 +139,174 @@ That's it. ClaudeOS is ready. Type `claudeos` to start.
 - **Capacity Planner** — Predict resource exhaustion
 - **API Gateway** — Rate limiting, API keys, reverse proxy
 - **Container Orchestrator** — Docker Swarm clusters
+</details>
+
+<details>
+<summary><b>White Hat — Ethical Security (13 agents)</b></summary>
+
+- **Vulnerability Scanner** — Automated CVE scanning across packages
+- **Security Auditor** — CIS benchmarks, Lynis, OpenSCAP audits
+- **Password Auditor** — Test password strength across accounts
+- **Web App Scanner** — OWASP Top 10 testing (Nikto, sqlmap, gobuster)
+- **SSL Tester** — Deep TLS analysis, cipher suites, vulnerabilities
+- **Network Mapper** — Topology discovery, port inventory (nmap, masscan)
+- **Patch Validator** — Verify security patches are applied
+- **Log Forensics** — Detect suspicious patterns in system logs
+- **Config Hardener** — Auto-harden SSH, kernel, services
+- **Access Auditor** — Audit users, sudo, SUID, ACLs
+- **Encryption Enforcer** — LUKS, TLS, GPG enforcement
+- **Compliance Checker** — PCI-DSS, HIPAA, SOC2, GDPR validation
+- **Incident Logger** — Real-time incident logging with chain of custody
+</details>
+
+<details>
+<summary><b>Grey Hat — Security Research (11 agents)</b></summary>
+
+- **Zero Day Hunter** — Fuzz with AFL++, libFuzzer, Boofuzz
+- **Reverse Engineer** — Binary analysis with radare2, Ghidra, strings
+- **Traffic Analyzer** — Deep packet inspection (tcpdump, tshark)
+- **Exploit Researcher** — Searchsploit, Metasploit, CVE research
+- **Bug Bounty Hunter** — Subfinder, amass, httpx, nuclei pipelines
+- **Credential Tester** — Hydra, medusa, CrackMapExec
+- **WiFi Breaker** — Aircrack-ng suite, hashcat WPA cracking
+- **DNS Poisoner** — DNS spoofing, cache poisoning testing
+- **Session Hijacker** — Bettercap, mitmproxy, token analysis
+- **API Fuzzer** — ffuf, wfuzz, GraphQL/REST fuzzing
+- **OSINT Gatherer** — theHarvester, Shodan, recon-ng, SpiderFoot
+</details>
+
+<details>
+<summary><b>Black Hat — Offensive Security (12 agents)</b></summary>
+
+> ⚠️ **For authorized penetration testing engagements only.**
+
+- **Attack Chain** — Multi-stage real attack workflows
+- **Malware Analyst** — Reverse engineer and dissect malware
+- **Data Exfiltrator** — DNS/ICMP/steganography exfil testing
+- **Ransomware Tester** — Real backup recovery validation
+- **APT Operator** — Long-term persistent access campaigns
+- **Social Engineer** — GoPhish, SET, real phishing tests
+- **Backdoor Hunter** — Find and plant test backdoors
+- **Keylogger Deployer** — Logkeys, PAM tty_audit, evdev
+- **Rootkit Builder** — LKM/userspace rootkits, detection testing
+- **C2 Operator** — Sliver, Mythic, custom C2 frameworks
+- **Cryptojacker** — Mining injection and detection testing
+- **Supply Chain Attacker** — Dependency confusion, typosquatting
+</details>
+
+<details>
+<summary><b>Red Team — Combined Operations (15 agents)</b></summary>
+
+- **Red Commander** — Orchestrate full red team operations
+- **Attack Planner** — Multi-vector attack strategy planning
+- **Defense Breaker** — Bypass firewalls, IDS, WAF, EDR
+- **Tool Forge** — Build custom exploit tools and payloads
+- **Recon Master** — Deep recon, OSINT, fingerprinting
+- **Persistence Agent** — Maintain access (cron, systemd, PAM, kernel)
+- **Lateral Mover** — SSH pivoting, proxychains, network pivoting
+- **Exfil Operator** — Multi-channel data extraction
+- **Evasion Engine** — Real-time AV/IDS/WAF/EDR bypass
+- **Implant Builder** — Custom RATs and implants in C/Python/Go
+- **Vuln Weaponizer** — Turn CVEs into working exploits
+- **Phishing Operator** — Real phishing campaigns with GoPhish
+- **Report Writer** — Pro pentest reports with CVSS scoring
+- **Blue Team Tester** — Purple team exercises with Atomic Red Team
+- **Arsenal Manager** — Tool inventory mapped to MITRE ATT&CK
+</details>
+
+<details>
+<summary><b>Coder — Development (8 agents)</b></summary>
+
+- **Code Generator** — Scaffold projects (Node, Python, Go, Rust)
+- **Debugger** — gdb, strace, valgrind, perf profiling
+- **Refactorer** — Complexity analysis, dead code, AST refactoring
+- **API Designer** — OpenAPI, GraphQL, REST design
+- **Database Designer** — Schema design, migrations, optimization
+- **Test Writer** — pytest, Jest, Go testing, coverage
+- **Dependency Manager** — npm/pip/cargo audit, updates
+- **Doc Generator** — Sphinx, JSDoc, godoc, MkDocs
+</details>
+
+<details>
+<summary><b>Fixer — Auto-Repair (7 agents)</b></summary>
+
+- **Auto Healer** — Self-heal failing services
+- **Config Fixer** — Detect and fix misconfigurations
+- **Dependency Resolver** — Fix broken apt/pip/npm dependencies
+- **Log Doctor** — Diagnose issues from log patterns
+- **Network Healer** — Auto-fix DNS, routing, firewall, DHCP
+- **Boot Fixer** — GRUB, initramfs, fstab repair
+- **Database Repair** — MySQL/PostgreSQL/MongoDB recovery
+</details>
+
+<details>
+<summary><b>Always Up — Uptime & Resilience (8 agents)</b></summary>
+
+- **Uptime Guardian** — 24/7 monitoring with instant alerts
+- **Failover Manager** — Keepalived/VRRP, HAProxy failover
+- **Load Balancer** — Nginx/HAProxy load balancing
+- **Chaos Tester** — Real chaos engineering with stress-ng, tc netem
+- **DDoS Shield** — Detection and automatic mitigation
+- **Auto Restarter** — Smart restart with backoff strategies
+- **Redundancy Manager** — DRBD, GlusterFS, Pacemaker, replicas
+- **Heartbeat Monitor** — Lightweight ICMP/TCP/HTTP checks
+</details>
+
+<details>
+<summary><b>Gamer — Game Server Management (8 agents)</b></summary>
+
+- **Game Server Manager** — Universal game server lifecycle
+- **Minecraft Server** — Paper/Spigot/Fabric, plugins, JVM tuning
+- **Steam Server** — SteamCMD games (CS2, Valheim, Rust, ARK)
+- **Game Performance** — Tick rate, FPS, Aikar's flags
+- **Player Manager** — Bans, whitelists, RCON, LuckPerms
+- **Mod Manager** — Workshop downloads, conflict resolution
+- **Game Backup** — Hot world backups, rsnapshot, S3 sync
+- **Discord Bot Manager** — Game ↔ Discord bridge bots
+</details>
+
+<details>
+<summary><b>Automation (15 agents)</b></summary>
+
+- **Script Builder** — Generate bash/python automation scripts
+- **Cron Master** — Advanced cron orchestration with dependencies
+- **Webhook Listener** — Receive webhooks with HMAC validation
+- **Task Automator** — Chain actions into workflows
+- **File Watcher** — inotify-based file monitoring
+- **Event Reactor** — React to system events automatically
+- **API Automator** — REST/GraphQL pipelines with auth
+- **Email Automator** — Postfix, procmail, sieve, IMAP automation
+- **Report Generator** — Automated system/security reports
+- **Cleanup Automator** — Scheduled temp/log/cache cleanup
+- **Deploy Automator** — Full deployment pipelines with rollback
+- **Notification Router** — Multi-channel routing with rules
+- **Retry Engine** — Exponential backoff, DLQ, circuit breaker
+- **Trigger Builder** — Custom if-X-then-Y triggers
+- **Batch Processor** — Parallel batch jobs across servers
+</details>
+
+<details>
+<summary><b>Network & Infrastructure (9 agents)</b></summary>
+
+- **VPN Manager** — WireGuard, OpenVPN setup and management
+- **Proxy Manager** — Nginx, HAProxy, SOCKS5, Tor, Privoxy
+- **Bandwidth Monitor** — Real traffic monitoring and throttling
+- **Cluster Manager** — Kubernetes (kubeadm, k3s), Docker Swarm
+- **Cloud Deployer** — AWS, GCP, Azure, DigitalOcean, Terraform
+- **Firewall Architect** — Complex iptables/nftables/UFW rulesets
+- **File Manager** — Advanced file ops, search, bulk operations
+- **System Profiler** — Hardware inventory and benchmarking
+- **Update Manager** — OS updates with snapshots and rollback
+</details>
+
+<details>
+<summary><b>Stealth — Authorized Red Team (3 agents)</b></summary>
+
+> ⚠️ **For authorized red team engagements only.**
+
+- **Trace Cleaner** — Clean logs, history, utmp/wtmp
+- **Tunnel Builder** — SSH/socat/stunnel/chisel tunnels
+- **Identity Rotator** — MAC/IP/DNS/hostname rotation
 </details>
 
 ## Autonomous Features

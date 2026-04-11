@@ -21,6 +21,18 @@
 
 ---
 
+## 🛡️ Our Mission
+
+**ClaudeOS is built for defenders, learners, and ethical hackers.**
+
+We built this for the people who want to make systems safer — sysadmins protecting their infrastructure, bug bounty hunters earning legit rewards, students learning in CTFs, pentesters running authorized engagements, and blue teams validating their defenses.
+
+If you want to attack people, steal data, or harm others — **this is not the tool for you.** Unauthorized access is a crime. Real victims pay the price. Walk away.
+
+For everyone else: welcome. Let's build something that makes the internet a little safer.
+
+---
+
 ## What is ClaudeOS?
 
 ClaudeOS turns your Linux server into an AI-managed system. Instead of memorizing hundreds of commands, just tell it what you want in plain English:
@@ -151,11 +163,63 @@ Agents marked with ⚠️ (Black Hat, Red Team, Stealth) are powerful offensive 
 #### What You Need Before Running Offensive Agents
 
 **1. Authorization (mandatory)**
-- Written permission from the system owner (signed scope document)
-- Defined Rules of Engagement (RoE): what's in scope, what's out of scope
-- Clear time window for testing
-- Emergency contact for the target organization
-- Approved testing methods (no DoS unless explicitly allowed)
+
+You **must** have one or more of these before running offensive agents against any target:
+
+| Permission Type | What It Looks Like | Where to Get It |
+|---|---|---|
+| **Signed Pentest Contract** | Written agreement from the system owner authorizing security testing, with scope, timeline, and signatures | Direct from client/employer |
+| **Bug Bounty Program** | Public program with defined scope, rules, and safe harbor language | HackerOne, Bugcrowd, Intigriti, YesWeHack, Synack |
+| **Letter of Authorization (LoA)** | Formal letter on company letterhead, signed by an authorized officer (CISO, CTO, IT Director), naming you and the systems in scope | Internal corporate request |
+| **Statement of Work (SoW)** | Detailed contract describing testing services, deliverables, and authorization | Pentest client engagements |
+| **CTF / Lab Permission** | Terms of service of the CTF platform, or you own the lab | TryHackMe, HackTheBox, your home lab |
+| **Vendor Authorization** | Some cloud/SaaS providers require pre-notification before testing | AWS Penetration Testing form, Microsoft Cloud Pen Test rules |
+| **Self-Owned Systems** | You personally own and control the target hardware and network | Your own servers, VPS, home lab |
+
+#### What a Valid Authorization Document Must Contain
+
+A proper pentest authorization (the gold standard) includes **all** of these:
+
+- ✅ **Names of authorized testers** (you, by full legal name)
+- ✅ **Scope** — exact IPs, domains, applications, networks in scope
+- ✅ **Out of scope** — systems explicitly forbidden from testing
+- ✅ **Time window** — start date/time and end date/time of testing
+- ✅ **Allowed techniques** — what's permitted (recon, exploitation, social engineering, DoS testing, etc.)
+- ✅ **Forbidden techniques** — what's not allowed (e.g., no actual DoS, no data exfiltration of real customer data)
+- ✅ **Emergency contact** — name, phone, email of someone reachable 24/7
+- ✅ **Authorizing party** — signature, title, date from someone with authority to grant permission
+- ✅ **Indemnification clause** — protection for the tester acting in good faith within scope
+- ✅ **Data handling** — what to do with sensitive data discovered during testing
+
+#### Sample Authorization Templates
+
+Use these as a starting point — get them reviewed by a lawyer for real engagements:
+
+- **PTES** — [Penetration Testing Execution Standard](http://www.pentest-standard.org/)
+- **SANS Sample LoA** — Search "SANS Letter of Authorization template"
+- **OWASP Pre-engagement** — [OWASP Testing Guide](https://owasp.org/www-project-web-security-testing-guide/)
+- **NIST SP 800-115** — Technical Guide to Information Security Testing
+- **OSSTMM** — Open Source Security Testing Methodology Manual
+
+#### Where to Store Your Authorization
+
+ClaudeOS expects your authorization documents to live at:
+```
+/etc/claudeos/authorizations/{engagement-name}/
+├── authorization.pdf       # Signed authorization document
+├── scope.txt              # In-scope IPs/domains (one per line)
+├── out-of-scope.txt       # Out-of-scope IPs/domains
+├── contacts.txt           # Emergency contacts
+├── start-date             # ISO date when authorized testing begins
+└── end-date               # ISO date when authorization expires
+```
+
+When you launch an offensive agent, ClaudeOS will:
+1. Ask which engagement you're working on
+2. Verify the target is in your scope file
+3. Verify the current date is within the authorized time window
+4. Log the action with the engagement name attached
+5. Refuse to act if any check fails
 
 **2. Isolated environment (recommended)**
 - Run from a dedicated pentest VM or jump box

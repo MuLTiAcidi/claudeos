@@ -28,6 +28,40 @@ If this is you and you're reading this: **DM the maintainer**. Your story will h
 
 ---
 
+## 2026-04-11 — First Real Bug Bounty Find on a Client Engagement
+
+> *"ClaudeOS just found a bug on one of [my] big websites. I can't tell you which website because it's confidential to my client. After he confirms, I'll tell you what it was and what I did to fix it."*
+> — Anonymous bug bounty professional
+
+**What we know:**
+- Real bug bounty hunter, real client engagement, real paying website
+- ClaudeOS found a vulnerability the human professional had not yet found
+- The hunter is respecting client confidentiality and going through proper
+  disclosure before sharing details — the textbook responsible disclosure flow
+
+**Why this matters:**
+- Sysadmin/defender wins (Story #1) prove ClaudeOS works for protecting servers.
+- A working professional using ClaudeOS on **paid client work** and finding a
+  **real exploitable bug** proves ClaudeOS works for offensive security too.
+- Pros don't risk their reputation on unproven tools.
+- This is the moment "ClaudeOS is for hobbyists" died.
+
+**What we're waiting on (with patience and respect):**
+- Client clearance for disclosure
+- Vendor patch deployed
+- Hunter's permission to publish
+- Then: which agent caught it, what the bug class was, how it was reported,
+  what the patch looked like, how long the bug had existed before detection
+
+We are **not** pressuring the hunter for details. Responsible disclosure
+can take weeks. The story will be told when it can be told.
+
+If this is you and you're reading this: **whenever you're ready, we're
+listening.** We'll publish exactly what you authorize, and not a word more.
+This page will be updated when you give the green light.
+
+---
+
 ## How to add your story
 
 1. Open an issue: https://github.com/MuLTiAcidi/claudeos/issues/new

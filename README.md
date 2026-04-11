@@ -99,14 +99,14 @@ ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hid
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
 │  • Reads your request                                   │
-│  • Picks the right agent(s) from 247 specialists        │
+│  • Picks the right agent(s) from 248 specialists        │
 │  • Coordinates multi-agent workflows                    │
 │  • Verifies authorization for offensive agents          │
 └────────────────────┬────────────────────────────────────┘
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 3: SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)  │
-│  • 247 expert playbooks with real commands              │
+│  • 248 expert playbooks with real commands              │
 │  • Each one is just a Markdown file                     │
 │  • Loaded on demand by the orchestrator                 │
 └────────────────────┬────────────────────────────────────┘
@@ -278,9 +278,9 @@ Testing systems without authorization is illegal almost everywhere. **You are re
 
 ---
 
-## 247 Specialist AI Agents
+## 248 Specialist AI Agents
 
-ClaudeOS ships with **247 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
+ClaudeOS ships with **248 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
 
 <details>
 <summary><b>Core System (9 agents)</b></summary>
@@ -650,12 +650,12 @@ ClaudeOS ships with **247 specialized AI agents** across 17 categories. Every ag
 
 ## ⚡ Pro Features (v2.0)
 
-ClaudeOS v2 adds 10 new pro features that make managing 247 agents actually pleasant:
+ClaudeOS v2 adds 10 new pro features that make managing 248 agents actually pleasant:
 
 | Command | What it does |
 |---|---|
 | `claudeos wizard` | First-run setup wizard — picks profile, mode, notifications in 60 seconds |
-| `claudeos agents` | Browse, search, and read all 247 agents by category |
+| `claudeos agents` | Browse, search, and read all 248 agents by category |
 | `claudeos workflow` | Run pre-built multi-agent workflows (`bug-bounty`, `recon`, `wordpress`, etc.) |
 | `claudeos engagement` | Manage bug bounty/pentest workspaces with auto-organized output |
 | `claudeos findings` | SQLite-backed findings tracker with CVSS, status, payouts |

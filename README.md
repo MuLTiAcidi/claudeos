@@ -75,6 +75,96 @@ That's it. ClaudeOS is ready. Type `claudeos` to start.
 | **Multi-Node** | Managing multiple servers | `sudo bash install.sh --multi-node` |
 | **Raspberry Pi** | ARM boards, home servers | `sudo bash install.sh --pi` |
 
+## How to Use Agents
+
+ClaudeOS agents are smart specialists. You don't need to call them by name — just describe what you want and ClaudeOS picks the right agent automatically.
+
+### The 3 Ways to Use Agents
+
+**1. Natural language (easiest)** — Just talk to ClaudeOS:
+```bash
+$ claudeos
+> "scan my server for vulnerabilities"          # → vulnerability-scanner
+> "set up a Minecraft server with 8GB RAM"      # → minecraft-server
+> "back up the database every 6 hours"          # → backup + cron-master
+> "my nginx is throwing 502 errors, fix it"     # → log-doctor + config-fixer
+> "harden this server against attacks"          # → config-hardener + security
+```
+
+**2. Call an agent directly** — When you know what you want:
+```bash
+$ claudeos
+> "use the wifi-breaker agent to audit my office wifi"
+> "ask the report-writer to generate a pentest report from today's findings"
+> "have the chaos-tester run a network failure test on staging"
+```
+
+**3. Chain multiple agents** — For complex workflows:
+```bash
+$ claudeos
+> "use recon-master to scan example.com, then vuln-weaponizer to find exploits,
+   then report-writer to document everything"
+```
+
+### Agent Categories at a Glance
+
+| Need to... | Use these agents |
+|---|---|
+| Manage daily server operations | Core System, Infrastructure, Monitoring |
+| Audit security defensively | White Hat (vulnerability-scanner, security-auditor, ssl-tester) |
+| Pentest your own systems | Grey Hat, Black Hat, Red Team (authorized only) |
+| Write or fix code | Coder agents (code-generator, debugger, refactorer) |
+| Auto-fix broken things | Fixer agents (auto-healer, log-doctor, network-healer) |
+| Keep services online 24/7 | Always Up agents (uptime-guardian, failover-manager) |
+| Run game servers | Gamer agents (minecraft-server, steam-server) |
+| Automate repetitive tasks | Automation agents (cron-master, deploy-automator) |
+
+### Agent Files
+
+Every agent lives at `agents/{agent-name}/CLAUDE.md` and contains:
+- **Safety rules** — what the agent will and won't do
+- **Real commands** — every bash command is tested and ready to run
+- **Workflows** — common task templates
+- **Troubleshooting** — fix common issues
+
+You can read any agent's CLAUDE.md to learn what it can do:
+```bash
+cat /opt/claudeos/agents/vulnerability-scanner/CLAUDE.md
+```
+
+### Safety First
+
+Agents marked with ⚠️ (Black Hat, Red Team, Stealth) are for **authorized testing only**:
+- You must have written permission to test the target
+- Never run them against systems you don't own
+- ClaudeOS will ask for confirmation before destructive actions
+- All actions are logged to `/var/log/claudeos/actions.log`
+
+### Common Examples
+
+```bash
+# Daily operations
+> "show me anything weird in today's logs"           # log-aggregator
+> "what services are using too much memory?"         # monitoring + process-forensics
+> "update everything but keep nginx pinned"          # update-manager
+
+# Security
+> "check my SSL certs and renew anything expiring"   # ssl-watchdog + ssl-tester
+> "audit who has sudo access on this server"        # access-auditor
+> "harden this fresh install"                        # config-hardener
+
+# Recovery
+> "the database crashed, recover it"                 # database-repair
+> "fix my broken DNS"                                # network-healer
+> "GRUB won't boot, help"                            # boot-fixer
+
+# Automation
+> "deploy the main branch from github every push"   # deploy-automator + webhook-listener
+> "alert me on Telegram if disk hits 85%"           # event-reactor + notification-router
+```
+
+---
+
 ## 182 Specialist AI Agents
 
 ClaudeOS ships with **182 specialized AI agents** across 16 categories. Every agent contains real working commands — no simulations.

@@ -143,9 +143,48 @@ done
 # Find processes with deleted binaries
 ls -la /proc/*/exe 2>/dev/null | grep "(deleted)"
 
-# Check for LD_PRELOAD backdoors
-cat /etc/ld.so.preload 2>/dev/null
+# Check for LD_PRELOAD rootkits — three layers of detection
+#
+# IMPORTANT LESSON learned the hard way:
+# A readdir-hooking LD_PRELOAD rootkit FOOLS the classic "compare ps -e to ls /proc"
+# detection because BOTH tools use libc readdir() under the hood, and both end up
+# calling our hooked function. The PID counts come out IDENTICAL even though
+# processes are hidden. So we use three independent detection layers instead.
+
+# Layer 1: /etc/ld.so.preload non-empty
+# This is the highest-confidence signal — if this file has anything in it,
+# every process on the box is loading whatever .so it points to. There is
+# almost no legitimate reason to have something here on a normal server.
+if [ -s /etc/ld.so.preload ]; then
+    echo "[🚨 CRITICAL] LD_PRELOAD rootkit detected — /etc/ld.so.preload contains:"
+    cat /etc/ld.so.preload | sed 's/^/    /'
+    echo ""
+    while read lib; do
+        if [ -n "$lib" ] && [ -f "$lib" ]; then
+            echo "    Library: $lib"
+            ls -la "$lib" 2>/dev/null | sed 's/^/      /'
+            file "$lib" 2>/dev/null | sed 's/^/      /'
+        fi
+    done < /etc/ld.so.preload
+fi
 find / -name "ld.so.preload" 2>/dev/null
+
+# Layer 2: scan /proc/*/maps for suspicious .so libraries
+# This bypasses readdir hooks because we are reading file CONTENTS, not enumerating
+# directories. Any library loaded into a process shows up in /proc/PID/maps.
+# CAVEAT: this only finds processes that started AFTER the rootkit was installed.
+# Older processes need to be checked individually.
+echo ""
+echo "Scanning /proc/*/maps for suspicious .so loads..."
+for f in /proc/[0-9]*/maps; do
+    grep -E "/(tmp|var/tmp|dev/shm|home/[^/]+/\.cache)/.*\.so" "$f" 2>/dev/null | while read line; do
+        pid=$(echo "$f" | cut -d/ -f3)
+        comm=$(cat /proc/$pid/comm 2>/dev/null)
+        echo "  [🚨 SUSPICIOUS LIB] PID $pid ($comm): $line"
+    done
+done
+
+# Layer 3: environment + persistence locations
 env | grep LD_PRELOAD
 grep -r "LD_PRELOAD" /etc/environment /etc/profile /etc/profile.d/ ~/.bashrc ~/.profile 2>/dev/null
 

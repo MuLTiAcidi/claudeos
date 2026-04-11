@@ -99,14 +99,14 @@ ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hid
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
 │  • Reads your request                                   │
-│  • Picks the right agent(s) from 232 specialists        │
+│  • Picks the right agent(s) from 247 specialists        │
 │  • Coordinates multi-agent workflows                    │
 │  • Verifies authorization for offensive agents          │
 └────────────────────┬────────────────────────────────────┘
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 3: SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)  │
-│  • 232 expert playbooks with real commands              │
+│  • 247 expert playbooks with real commands              │
 │  • Each one is just a Markdown file                     │
 │  • Loaded on demand by the orchestrator                 │
 └────────────────────┬────────────────────────────────────┘
@@ -278,9 +278,9 @@ Testing systems without authorization is illegal almost everywhere. **You are re
 
 ---
 
-## 232 Specialist AI Agents
+## 247 Specialist AI Agents
 
-ClaudeOS ships with **232 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
+ClaudeOS ships with **247 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
 
 <details>
 <summary><b>Core System (9 agents)</b></summary>
@@ -611,14 +611,51 @@ ClaudeOS ships with **232 specialized AI agents** across 17 categories. Every ag
 - **AI Jailbreaker** — DAN, role-play, encoding, multi-step, garak, PAIR, GCG
 </details>
 
+<details>
+<summary><b>🛰️ Recon & Bypass (4 agents)</b></summary>
+
+> Born at 1 AM on 2026-04-12 from Bassx's "this would be sick if it existed" list.
+
+- **WAF Fingerprinter** — Identifies which WAF is in front (Cloudflare/Akamai/AWS WAF/Imperva/F5/Sucuri/ModSec/Wordfence/Barracuda/FortiWeb/etc.) and outputs known bypass techniques specific to that WAF
+- **Origin Finder** — Finds the real IP behind Cloudflare/Akamai via 10 techniques: cert SAN search, historical DNS, MX records, SPF walker, favicon hash, WordPress XML-RPC pingback, SSRF, leaky CDN headers, origin subdomain patterns, subfinder pivot
+- **Shodan Pivoter** — Pivots through Shodan/Censys/ZoomEye/BinaryEdge to find related infrastructure via SSL hash, favicon hash, JARM, HTTP title
+- **HTTP/2 Smuggler** — HTTP/2-specific smuggling: h2c upgrade, downgrade desync (H2.CL, H2.TE), frame smuggling, pseudo-header attacks
+</details>
+
+<details>
+<summary><b>🕸️ Web Vuln Class Specialists (4 agents)</b></summary>
+
+- **WebSocket Tester** — WebSocket auth bypass, CSWSH, message injection, IDOR via WS, subprotocol attacks
+- **postMessage Abuser** — Find + exploit `window.postMessage()` handlers in SPAs (origin validation flaws, eval sinks, OAuth token theft)
+- **Stripe Webhook Tester** — Tests payment webhook signature validation for Stripe, GitHub, Slack, Shopify, Twilio, Square, PayPal IPN
+- **CSP Analyzer** — Scores Content-Security-Policy headers, finds `unsafe-inline` / wildcard / JSONP bypass weaknesses, references known bypass hosts
+</details>
+
+<details>
+<summary><b>🏪 Platform Specialists (3 agents)</b></summary>
+
+- **Shopify Hunter** — Theme XSS, Liquid SSTI, OAuth scope abuse, checkout flow bypass, customer ATO via password reset poisoning, storefront GraphQL abuse
+- **M365 Attacker** — Microsoft 365 / Azure AD: tenant enum via openid-configuration, MSOLSpray/o365spray password spray, FOCI client pivot, illicit consent grant, ROADtools
+- **Okta Tester** — Okta SSO: tenant fingerprinting, open enrollment, SAML XSW1-XSW8, MFA push-bombing, API token hunting
+</details>
+
+<details>
+<summary><b>🛡️ Defense & Workflow (4 agents)</b></summary>
+
+- **GTFOBins Lookup** — Offline GTFOBins reference + auto-scanner for SUID/sudo/capabilities. `claudeos gtfobins scan-all` returns every privesc path on the box
+- **LOLBAS Finder** — Linux Living-Off-The-Land binaries database + payload generator. Defender mode generates auditd rules; offensive mode emits paste-ready payloads
+- **Drift Detector** — Snapshots system state (cron, services, SUID, ports, packages, /etc, kernel modules) and alerts on drift via webhook/Telegram/email
+- **Bug Payout Predictor** — SQLite-backed predictor that ingests HackerOne hacktivity + Bugcrowd disclosures, predicts likely payout for a vuln type before you spend hours writing the report
+</details>
+
 ## ⚡ Pro Features (v2.0)
 
-ClaudeOS v2 adds 10 new pro features that make managing 231 agents actually pleasant:
+ClaudeOS v2 adds 10 new pro features that make managing 247 agents actually pleasant:
 
 | Command | What it does |
 |---|---|
 | `claudeos wizard` | First-run setup wizard — picks profile, mode, notifications in 60 seconds |
-| `claudeos agents` | Browse, search, and read all 231 agents by category |
+| `claudeos agents` | Browse, search, and read all 247 agents by category |
 | `claudeos workflow` | Run pre-built multi-agent workflows (`bug-bounty`, `recon`, `wordpress`, etc.) |
 | `claudeos engagement` | Manage bug bounty/pentest workspaces with auto-organized output |
 | `claudeos findings` | SQLite-backed findings tracker with CVSS, status, payouts |

@@ -302,7 +302,10 @@ cat > /opt/cryptojack_test/detection/network_detect.sh << 'NETDETECT'
 LOG="/opt/cryptojack_test/detection/network_alerts.log"
 
 # Known mining pool patterns
-POOL_PATTERNS="stratum|mining|pool|hashvault|nanopool|minergate|supportxmr|f2pool|nicehash"
+# IMPORTANT: Do NOT match the bare word "pool" — that catches kernel
+# threads like [pool_workqueue_release], [kworker/u8:2-pool], etc.
+# Match only explicit mining-pool tokens.
+POOL_PATTERNS="stratum|hashvault|nanopool|minergate|supportxmr|f2pool|nicehash|miningpoolhub|2miners|ethermine|flexpool|herominers|moneroocean"
 POOL_PORTS="3333|4444|5555|7777|8888|9999|14433|14444|45560"
 
 echo "[$(date)] Starting network detection..." >> "$LOG"

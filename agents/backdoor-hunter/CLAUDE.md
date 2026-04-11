@@ -158,11 +158,47 @@ ldconfig -p | grep -v "^$" | awk '{print $NF}' | while read lib; do
     fi
 done
 
-# Check systemd services for backdoors
+# Check systemd services for backdoors (ExecStart heuristic)
 systemctl list-unit-files --type=service | grep enabled | while read -r svc _; do
     EXEC=$(systemctl show "$svc" -p ExecStart 2>/dev/null | cut -d= -f2-)
     if echo "$EXEC" | grep -qE "(curl|wget|nc|python|perl|/tmp|/dev/shm)"; then
         echo "[SUSPICIOUS] Service $svc: $EXEC"
+    fi
+done
+
+# Find admin-installed services in /etc/systemd/system that are NOT
+# shipped by a package — this is exactly where attackers drop persistence.
+#
+# Key insight: services in /usr/lib/systemd/system/ are OS-shipped (even
+# if dpkg -S doesn't always find them due to snap/livepatch quirks).
+# Services in /etc/systemd/system/ are admin-managed — that's where we look.
+#
+# We allowlist known-good non-package services (pm2, custom apps) to
+# minimize false positives, then ExecStart-heuristic-check the rest.
+LEGIT_NAMES="pm2-|supervisord|gunicorn|uwsgi|node_exporter|prometheus|grafana|netdata|certbot|cloudflared|tailscaled|wireguard"
+SUSPICIOUS_EXEC="/dev/tcp/|bash -i|nc -e|nc -l|/tmp/|/var/tmp/|/dev/shm/|wget.*\\|.*sh|curl.*\\|.*sh|base64.*-d.*\\|"
+
+find /etc/systemd/system -maxdepth 2 -type f -name "*.service" 2>/dev/null | while read unit; do
+    svc=$(basename "$unit")
+
+    # Skip allowlisted legitimate non-package services
+    if echo "$svc" | grep -qE "$LEGIT_NAMES"; then continue; fi
+
+    # Skip if it actually IS in dpkg (some packages do install here)
+    if dpkg -S "$unit" >/dev/null 2>&1; then continue; fi
+
+    EXEC=$(grep "^ExecStart=" "$unit" 2>/dev/null | head -1 | sed 's/^ExecStart=//')
+
+    # HIGH severity: ExecStart matches obvious backdoor patterns
+    if echo "$EXEC" | grep -qE "$SUSPICIOUS_EXEC"; then
+        echo "[🚨 BACKDOOR] $svc"
+        echo "             Path: $unit"
+        echo "             ExecStart: $EXEC"
+    else
+        # LOW severity: just non-package, worth a quick eyeball
+        echo "[REVIEW] Non-package service: $svc"
+        echo "         Path: $unit"
+        echo "         ExecStart: $EXEC"
     fi
 done
 ```

@@ -182,122 +182,76 @@ cat /opt/claudeos/agents/vulnerability-scanner/CLAUDE.md
 
 ### Safety First
 
-Agents marked with ⚠️ (Black Hat, Red Team, Stealth) are powerful offensive tools. They are designed for **authorized security testing** — pentesting your own systems, CTF competitions, lab environments, and engagements where you have explicit written permission.
+Agents marked with ⚠️ (Black Hat, Red Team, Stealth, Bug Bounty) are powerful offensive tools. ClaudeOS uses a **simple, common-sense approach** to authorization — no PDFs, no contracts, no bureaucracy for the 95% of users who are bug bounty hunters, CTF players, or lab owners.
 
-#### Legitimate Use Cases
+#### The Default: One-Time Confirmation
 
-| Use Case | Example |
-|---|---|
-| **Pentest your own infrastructure** | Find weaknesses before attackers do |
-| **Bug bounty programs** | Test targets in scope (HackerOne, Bugcrowd, etc.) |
-| **Authorized client engagements** | Run as a security consultant with signed contracts |
-| **Internal red team exercises** | Validate your blue team's detection capabilities |
-| **CTF competitions** | Practice on Hack The Box, TryHackMe, VulnHub |
-| **Home lab learning** | Build a lab with intentionally vulnerable VMs |
-| **Compliance testing** | PCI-DSS pentests, SOC 2 audits |
+The first time you run an offensive agent, ClaudeOS asks you **once**:
 
-#### What You Need Before Running Offensive Agents
-
-**1. Authorization (mandatory)**
-
-You **must** have one or more of these before running offensive agents against any target:
-
-| Permission Type | What It Looks Like | Where to Get It |
-|---|---|---|
-| **Signed Pentest Contract** | Written agreement from the system owner authorizing security testing, with scope, timeline, and signatures | Direct from client/employer |
-| **Bug Bounty Program** | Public program with defined scope, rules, and safe harbor language | HackerOne, Bugcrowd, Intigriti, YesWeHack, Synack |
-| **Letter of Authorization (LoA)** | Formal letter on company letterhead, signed by an authorized officer (CISO, CTO, IT Director), naming you and the systems in scope | Internal corporate request |
-| **Statement of Work (SoW)** | Detailed contract describing testing services, deliverables, and authorization | Pentest client engagements |
-| **CTF / Lab Permission** | Terms of service of the CTF platform, or you own the lab | TryHackMe, HackTheBox, your home lab |
-| **Vendor Authorization** | Some cloud/SaaS providers require pre-notification before testing | AWS Penetration Testing form, Microsoft Cloud Pen Test rules |
-| **Self-Owned Systems** | You personally own and control the target hardware and network | Your own servers, VPS, home lab |
-
-#### What a Valid Authorization Document Must Contain
-
-A proper pentest authorization (the gold standard) includes **all** of these:
-
-- ✅ **Names of authorized testers** (you, by full legal name)
-- ✅ **Scope** — exact IPs, domains, applications, networks in scope
-- ✅ **Out of scope** — systems explicitly forbidden from testing
-- ✅ **Time window** — start date/time and end date/time of testing
-- ✅ **Allowed techniques** — what's permitted (recon, exploitation, social engineering, DoS testing, etc.)
-- ✅ **Forbidden techniques** — what's not allowed (e.g., no actual DoS, no data exfiltration of real customer data)
-- ✅ **Emergency contact** — name, phone, email of someone reachable 24/7
-- ✅ **Authorizing party** — signature, title, date from someone with authority to grant permission
-- ✅ **Indemnification clause** — protection for the tester acting in good faith within scope
-- ✅ **Data handling** — what to do with sensitive data discovered during testing
-
-#### Sample Authorization Templates
-
-Use these as a starting point — get them reviewed by a lawyer for real engagements:
-
-- **PTES** — [Penetration Testing Execution Standard](http://www.pentest-standard.org/)
-- **SANS Sample LoA** — Search "SANS Letter of Authorization template"
-- **OWASP Pre-engagement** — [OWASP Testing Guide](https://owasp.org/www-project-web-security-testing-guide/)
-- **NIST SP 800-115** — Technical Guide to Information Security Testing
-- **OSSTMM** — Open Source Security Testing Methodology Manual
-
-#### Where to Store Your Authorization
-
-ClaudeOS expects your authorization documents to live at:
 ```
-/etc/claudeos/authorizations/{engagement-name}/
-├── authorization.pdf       # Signed authorization document
-├── scope.txt              # In-scope IPs/domains (one per line)
-├── out-of-scope.txt       # Out-of-scope IPs/domains
-├── contacts.txt           # Emergency contacts
-├── start-date             # ISO date when authorized testing begins
-└── end-date               # ISO date when authorization expires
+> Are you authorized to test [target]?
+> Type one of:
+>   1) bug-bounty   (HackerOne, Bugcrowd, Intigriti, YesWeHack, etc.)
+>   2) ctf          (HackTheBox, TryHackMe, VulnHub, lab platform)
+>   3) own          (my own server/VPS/home lab)
+>   4) client       (paid pentest engagement — see Pro Mode below)
+>   5) research     (security research on systems I'm authorized to test)
+>   no              (cancel)
 ```
 
-When you launch an offensive agent, ClaudeOS will:
-1. Ask which engagement you're working on
-2. Verify the target is in your scope file
-3. Verify the current date is within the authorized time window
-4. Log the action with the engagement name attached
-5. Refuse to act if any check fails
+Type 1, 2, 3, or 5 → ClaudeOS proceeds. Done. Logged to `/var/log/claudeos/actions.log`. No documents required.
 
-**2. Isolated environment (recommended)**
-- Run from a dedicated pentest VM or jump box
-- Use a separate network interface to avoid leaking traffic
-- VPN or bastion host to keep your real IP off target logs
-- Snapshot your testing machine before starting
+That's it. No forms. No PDFs. No lawyers.
 
-**3. Required tools & resources**
-- ClaudeOS installed with API key configured
-- Sufficient disk space for captures, logs, evidence (10GB+ recommended)
-- Network access to the target (or local lab network)
-- Some agents need extra packages — they will tell you what to install
-- For wifi-breaker: a wireless adapter that supports monitor mode
+#### Why This Works
 
-**4. Documentation discipline**
-- Keep detailed notes of every command run
-- Save all output to `/var/log/claudeos/engagements/{engagement-name}/`
-- Use the `report-writer` agent to compile findings into a final report
-- Preserve evidence with chain of custody (use `incident-logger`)
+- **Bug bounty hunters** — your authorization is the program's scope page on HackerOne. ClaudeOS trusts you to read it.
+- **CTF players** — the platform itself is your authorization. Just play.
+- **Home lab owners** — you own it, you can break it.
+- **Security researchers** — you know your scope.
 
-#### How ClaudeOS Protects You
+ClaudeOS is a tool. **You** are responsible for being honest about your authorization. Lying to ClaudeOS to attack systems you don't own is illegal and on you, not the tool.
 
-- **Authorization gates** — Agents prompt for explicit confirmation: "Confirm you have authorization to test [target]"
-- **Scope enforcement** — You can set allowed targets in `/etc/claudeos/scope.conf` and ClaudeOS refuses out-of-scope actions
-- **Action logging** — Every command runs through `/var/log/claudeos/actions.log` with timestamps
-- **Destructive command confirmation** — `rm -rf`, `dd`, `format`, dropping tables, etc. require manual confirmation
-- **Dry-run mode** — Most agents support `--dry-run` to preview what they would do
-- **Cleanup procedures** — Stealth agents include teardown steps to remove artifacts after engagement
+#### Pro Mode (Optional — for paid client engagements)
+
+If you're a professional pentester running paid engagements where legal liability matters, you can opt into **Pro Mode**. This is for the ~5% of users who need a real audit trail.
+
+Enable in `/etc/claudeos/config.toml`:
+```toml
+[mode]
+pro_mode = true
+```
+
+In Pro Mode, ClaudeOS expects per-engagement scope files at:
+```
+/etc/claudeos/engagements/{name}/
+├── scope.txt          # In-scope targets (one per line)
+├── out-of-scope.txt   # Off-limits targets
+├── start-date         # YYYY-MM-DD
+└── end-date           # YYYY-MM-DD
+```
+
+Then ClaudeOS auto-validates every offensive action against the active engagement. Enterprise pentesters get the audit trail they need without making life harder for everyone else.
+
+#### What ClaudeOS Always Does
+
+- **Logs every action** to `/var/log/claudeos/actions.log` (regardless of mode)
+- **Confirms destructive operations** (`rm -rf`, format, drop database, etc.)
+- **Refuses to attack systems you didn't authorize** (no surprise targets)
+- **Provides cleanup procedures** for stealth/red team agents
 
 #### What ClaudeOS Will NOT Do
 
-- ❌ Attack systems you don't have authorization for
-- ❌ Run against `*.gov`, `*.mil`, critical infrastructure, or known production targets without explicit override
-- ❌ Bypass its own safety prompts
+- ❌ Run offensive agents without your one-time confirmation
 - ❌ Hide its actions from logs
-- ❌ Provide capabilities for malware distribution or unauthorized access
+- ❌ Help with malware distribution or unauthorized access
+- ❌ Pretend you have authorization when you don't
 
-#### Legal Reminder
+#### Legal Reminder (the short version)
 
-Unauthorized access to computer systems is illegal in most jurisdictions (Computer Fraud and Abuse Act in the US, Computer Misuse Act in the UK, similar laws worldwide). **You are responsible for ensuring you have permission to test any target.** ClaudeOS is a tool — the operator is responsible for legal and ethical use.
+Testing systems without authorization is illegal almost everywhere. **You are responsible** for staying within scope. ClaudeOS is a tool — the ethics and legality are on the operator.
 
-If you're unsure whether you have authorization, **don't run the agent**. When in doubt, ask the system owner first.
+**If you're not sure you have permission, don't run the agent.** Ask the system owner. Read the bug bounty program rules. Use your judgment.
 
 ### Common Examples
 

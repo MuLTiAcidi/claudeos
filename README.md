@@ -134,11 +134,70 @@ cat /opt/claudeos/agents/vulnerability-scanner/CLAUDE.md
 
 ### Safety First
 
-Agents marked with ⚠️ (Black Hat, Red Team, Stealth) are for **authorized testing only**:
-- You must have written permission to test the target
-- Never run them against systems you don't own
-- ClaudeOS will ask for confirmation before destructive actions
-- All actions are logged to `/var/log/claudeos/actions.log`
+Agents marked with ⚠️ (Black Hat, Red Team, Stealth) are powerful offensive tools. They are designed for **authorized security testing** — pentesting your own systems, CTF competitions, lab environments, and engagements where you have explicit written permission.
+
+#### Legitimate Use Cases
+
+| Use Case | Example |
+|---|---|
+| **Pentest your own infrastructure** | Find weaknesses before attackers do |
+| **Bug bounty programs** | Test targets in scope (HackerOne, Bugcrowd, etc.) |
+| **Authorized client engagements** | Run as a security consultant with signed contracts |
+| **Internal red team exercises** | Validate your blue team's detection capabilities |
+| **CTF competitions** | Practice on Hack The Box, TryHackMe, VulnHub |
+| **Home lab learning** | Build a lab with intentionally vulnerable VMs |
+| **Compliance testing** | PCI-DSS pentests, SOC 2 audits |
+
+#### What You Need Before Running Offensive Agents
+
+**1. Authorization (mandatory)**
+- Written permission from the system owner (signed scope document)
+- Defined Rules of Engagement (RoE): what's in scope, what's out of scope
+- Clear time window for testing
+- Emergency contact for the target organization
+- Approved testing methods (no DoS unless explicitly allowed)
+
+**2. Isolated environment (recommended)**
+- Run from a dedicated pentest VM or jump box
+- Use a separate network interface to avoid leaking traffic
+- VPN or bastion host to keep your real IP off target logs
+- Snapshot your testing machine before starting
+
+**3. Required tools & resources**
+- ClaudeOS installed with API key configured
+- Sufficient disk space for captures, logs, evidence (10GB+ recommended)
+- Network access to the target (or local lab network)
+- Some agents need extra packages — they will tell you what to install
+- For wifi-breaker: a wireless adapter that supports monitor mode
+
+**4. Documentation discipline**
+- Keep detailed notes of every command run
+- Save all output to `/var/log/claudeos/engagements/{engagement-name}/`
+- Use the `report-writer` agent to compile findings into a final report
+- Preserve evidence with chain of custody (use `incident-logger`)
+
+#### How ClaudeOS Protects You
+
+- **Authorization gates** — Agents prompt for explicit confirmation: "Confirm you have authorization to test [target]"
+- **Scope enforcement** — You can set allowed targets in `/etc/claudeos/scope.conf` and ClaudeOS refuses out-of-scope actions
+- **Action logging** — Every command runs through `/var/log/claudeos/actions.log` with timestamps
+- **Destructive command confirmation** — `rm -rf`, `dd`, `format`, dropping tables, etc. require manual confirmation
+- **Dry-run mode** — Most agents support `--dry-run` to preview what they would do
+- **Cleanup procedures** — Stealth agents include teardown steps to remove artifacts after engagement
+
+#### What ClaudeOS Will NOT Do
+
+- ❌ Attack systems you don't have authorization for
+- ❌ Run against `*.gov`, `*.mil`, critical infrastructure, or known production targets without explicit override
+- ❌ Bypass its own safety prompts
+- ❌ Hide its actions from logs
+- ❌ Provide capabilities for malware distribution or unauthorized access
+
+#### Legal Reminder
+
+Unauthorized access to computer systems is illegal in most jurisdictions (Computer Fraud and Abuse Act in the US, Computer Misuse Act in the UK, similar laws worldwide). **You are responsible for ensuring you have permission to test any target.** ClaudeOS is a tool — the operator is responsible for legal and ethical use.
+
+If you're unsure whether you have authorization, **don't run the agent**. When in doubt, ask the system owner first.
 
 ### Common Examples
 

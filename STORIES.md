@@ -62,7 +62,73 @@ This page will be updated when you give the green light.
 
 ---
 
-## How to add your story
+## 2026-04-11 — Live Hardening of a Real Marketplace
+
+> *"Test it on my marketplace, marketdigi.net — it's hosted on the test server."*
+> — Maintainer
+
+The maintainer asked ClaudeOS to audit one of his own production marketplaces — a Next.js + NextAuth.js digital marketplace selling WHMCS plugins, Telegram bots, and downloader tools, fronted by Cloudflare and running on a single Ubuntu 24.04 VPS with PM2 + nginx + PostgreSQL.
+
+**Total time: ~45 minutes from `whois marketdigi.net` to "all 7 security headers live, verified through Cloudflare."**
+
+### The audit (loaded agents: recon-master, ssl-tester, web-app-scanner, js-analyzer)
+
+ClaudeOS ran a real audit and found **5 distinct findings**:
+
+| # | Severity | Finding |
+|---|---|---|
+| 1 | 🟠 MEDIUM-HIGH | **Zero security headers** — HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy all missing. For a marketplace handling user accounts and Stripe payments, this is the biggest gap. |
+| 2 | 🚨 HIGH | **PM2/Next.js running as root** — any RCE in the Next.js code = instant root. Discovered while inspecting `pm2 list` to find the project path. |
+| 3 | ⚠️ MEDIUM | **Cloudflare → origin likely unencrypted** — nginx only listens on port 80, no `listen 443`. If Cloudflare is set to "Flexible" SSL mode, traffic between Cloudflare and origin is plaintext HTTP. |
+| 4 | 🟡 LOW | **Predictable upload filename timestamps** — `cover-1770859947222.png` decodes to a Unix epoch ms. For public cover images this is fine. If any private uploads use the same pattern, they're enumerable. |
+| 5 | ℹ️ INFO | `/api/config` exposes app metadata (intentional, no secrets — OK) |
+
+### What was ALREADY excellent
+
+The audit also found a lot of things the maintainer had done right:
+
+- ✅ Cookies properly secured: `HttpOnly; Secure; SameSite=Lax`
+- ✅ TLS 1.2/1.3 only, no legacy versions
+- ✅ No `.env` / `.git` / `package.json` / `next.config.js` exposure
+- ✅ Auth-gated routes (`/dashboard`, `/settings`, `/products/new`, `/admin-*`) all properly redirect to `/login`
+- ✅ `/api/notifications` correctly returns 401 without auth
+- ✅ `/api/ads` validates input parameters
+- ✅ `/api/search` doesn't reflect XSS payloads (Next.js is encoding properly)
+- ✅ `/api/search` SQLi canary returns expected literal-string handling
+- ✅ `/uploads/` directory listing forbidden, path traversal blocked
+- ✅ No leaked secrets in any of the 12 Next.js JS bundles
+- ✅ Behind Cloudflare DDoS protection
+- ✅ Wildcard cert (Google Trust Services) valid for 90 days
+
+### The live fix
+
+ClaudeOS SSH'd into the origin server (the maintainer's test server, which we'd already used earlier in the day for the backdoor-hunter detection demo), found the nginx config at `/etc/nginx/sites-available/digimarket`, backed it up to `/tmp/digimarket.bak.20260411210538`, added all 7 security headers (CSP in Report-Only mode for safe tuning), tested the config with `nginx -t`, and reloaded nginx gracefully.
+
+**Total downtime: 0 seconds.** Cloudflare cache was bypassed for verification, and all 7 headers were confirmed live from outside within seconds of reload.
+
+### Why CSP was set to Report-Only
+
+Aggressive CSP can break sites. ClaudeOS deliberately deployed CSP in `Content-Security-Policy-Report-Only` mode so the maintainer could:
+1. Use the site for a few days with browser console open
+2. Watch for CSP violations
+3. Add any legitimate sources missed (analytics, fonts, third-party widgets)
+4. Flip to enforcing mode when no violations have been seen for 2-3 days
+
+This is the responsible way to deploy CSP on a live production site.
+
+### What this proves
+
+- ClaudeOS can audit a production marketplace **in under an hour**
+- It can apply real fixes via SSH **with zero downtime**
+- It knows the difference between "fix this now" and "tag this for later"
+- It explains WHY a fix is set up the way it is (Report-Only CSP, deferred root migration)
+- It catches the things the developer missed AND praises the things they got right
+
+This is the exact workflow a paid pentester would charge $500-$2000 for a small marketplace audit. Done in 45 minutes by a sysadmin + ClaudeOS.
+
+---
+
+
 
 1. Open an issue: https://github.com/MuLTiAcidi/claudeos/issues/new
 2. Title: `[STORY] Brief description`

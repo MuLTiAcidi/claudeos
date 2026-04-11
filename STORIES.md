@@ -130,7 +130,7 @@ This is the exact workflow a paid pentester would charge $500-$2000 for a small 
 
 ## 2026-04-11 — Custom Rootkit, Failed Classic Detection, Real Fix Shipped
 
-> *"i want another demo but this time i want somthing more hardcore"*
+
 > — Maintainer
 
 We built a real **LD_PRELOAD rootkit** in C from scratch on a test box, watched the classic Linux defender techniques completely fail to detect it, found exactly why, and shipped a fix to the public `backdoor-hunter` agent in the same session.

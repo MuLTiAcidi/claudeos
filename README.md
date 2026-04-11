@@ -369,7 +369,7 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
-**Made with Claude Code**
+
 
 [Report Bug](https://github.com/MuLTiAcidi/claudeos/issues) · [Request Feature](https://github.com/MuLTiAcidi/claudeos/issues)
 

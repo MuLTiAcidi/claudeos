@@ -99,14 +99,14 @@ ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hid
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
 │  • Reads your request                                   │
-│  • Picks the right agent(s) from 200 specialists        │
+│  • Picks the right agent(s) from 231 specialists        │
 │  • Coordinates multi-agent workflows                    │
 │  • Verifies authorization for offensive agents          │
 └────────────────────┬────────────────────────────────────┘
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 3: SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)  │
-│  • 200 expert playbooks with real commands              │
+│  • 231 expert playbooks with real commands              │
 │  • Each one is just a Markdown file                     │
 │  • Loaded on demand by the orchestrator                 │
 └────────────────────┬────────────────────────────────────┘
@@ -278,9 +278,9 @@ Testing systems without authorization is illegal almost everywhere. **You are re
 
 ---
 
-## 200 Specialist AI Agents
+## 231 Specialist AI Agents
 
-ClaudeOS ships with **200 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
+ClaudeOS ships with **231 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
 
 <details>
 <summary><b>Core System (9 agents)</b></summary>
@@ -535,7 +535,119 @@ ClaudeOS ships with **200 specialized AI agents** across 17 categories. Every ag
 - **Collaborator** — Self-hosted out-of-band interaction server (interactsh-server)
 - **Nuclei Master** — Manage nuclei templates, custom template creation
 - **Screenshot Hunter** — Mass visual recon (gowitness, aquatone, eyewitness)
+- **Payload Crafter** — Custom exploit payloads, shellcode, webshells
 </details>
+
+<details>
+<summary><b>🎯 Advanced Bug Bounty (8 agents)</b></summary>
+
+> The vuln class specialists every BB hunter needs.
+
+- **XXE Hunter** — XML External Entity attacks (file read, blind, OOB, SSRF)
+- **SSTI Hunter** — Server-Side Template Injection (Jinja, Twig, Velocity, Freemarker)
+- **LFI Hunter** — Local File Inclusion + log poisoning + PHP filter chains
+- **Deserialization Hunter** — Java/PHP/Python/.NET/Ruby deserialization (ysoserial, phpggc)
+- **OAuth Tester** — OAuth flow vulns (redirect_uri, state, PKCE, scope)
+- **SAML Tester** — XSW1-XSW8, signature wrapping, NameID injection
+- **Prototype Pollution Hunter** — Server-side + client-side prototype pollution
+- **CSRF Hunter** — Token validation, SameSite, content-type bypass
+</details>
+
+<details>
+<summary><b>🌐 CMS & Framework Hunters (5 agents)</b></summary>
+
+- **WordPress Hunter** — Full wpscan integration, plugin/theme CVEs, xmlrpc abuse
+- **Drupal Hunter** — Drupalgeddon, droopescan, version fingerprinting
+- **Magento Hunter** — Trojan Order, Cosmic Sting, Shoplift, Magecart detection
+- **Laravel Hunter** — .env exposure, Ignition RCE (CVE-2021-3129), APP_KEY abuse
+- **Django Hunter** — DEBUG=True, SECRET_KEY → RCE, admin enum, DRF testing
+</details>
+
+<details>
+<summary><b>🏢 Active Directory (4 agents)</b></summary>
+
+> ⚠️ For authorized AD pentests only.
+
+- **AD Attacker** — Full AD attack chain: BloodHound, Kerberoasting, AS-REP, ACL abuse, DCSync
+- **SMB Tester** — Enum, EternalBlue, SMBGhost, PrintNightmare, ntlmrelayx
+- **Kerberos Attacker** — Golden/Silver tickets, S4U2Self/Proxy, RBCD, delegation abuse
+- **LDAP Tester** — Anonymous bind, AD enum, LDAP injection, RID brute
+</details>
+
+<details>
+<summary><b>☁️ Cloud Native (3 agents)</b></summary>
+
+- **AWS Tester** — Pacu, ScoutSuite, Prowler, IAM enum, S3, IMDSv1/v2, AssumeRole
+- **Kubernetes Tester** — kube-hunter, RBAC, pod escape, kubelet abuse, etcd
+- **Container Escape** — Docker socket, CAP_SYS_ADMIN, runc CVEs, cgroups, LKM
+</details>
+
+<details>
+<summary><b>📱 Mobile / IoT / Hardware (4 agents)</b></summary>
+
+- **Android Tester** — apktool, jadx, frida, drozer, MobSF, SSL pinning bypass
+- **iOS Tester** — frida-ios-dump, class-dump, objection, keychain dumping
+- **Firmware Extractor** — binwalk, unblob, jefferson, FAT, EMBA, secret hunting
+- **Bluetooth Tester** — BLE scanning, GATT, btlejack hijacking, gattacker MITM
+</details>
+
+<details>
+<summary><b>📊 Bug Bounty Workflow (4 agents)</b></summary>
+
+- **Vuln Tracker** — SQLite finding tracker with payouts, CVSS, status, export
+- **Program Monitor** — Watch H1/Bugcrowd/Intigriti/YesWeHack for scope changes
+- **Dupe Checker** — Pre-report duplicate screening across hacktivity feeds
+- **Recon Orchestrator** — Master pipeline: subfinder→httpx→nuclei→screenshots
+</details>
+
+<details>
+<summary><b>🤖 AI/ML Security (3 agents)</b></summary>
+
+> Emerging field — test LLM apps and ML models for security flaws.
+
+- **Prompt Injection Tester** — Direct/indirect injection, system prompt extraction
+- **Model Extractor** — Find exposed model files, shadow model extraction, MIA
+- **AI Jailbreaker** — DAN, role-play, encoding, multi-step, garak, PAIR, GCG
+</details>
+
+## ⚡ Pro Features (v2.0)
+
+ClaudeOS v2 adds 10 new pro features that make managing 231 agents actually pleasant:
+
+| Command | What it does |
+|---|---|
+| `claudeos wizard` | First-run setup wizard — picks profile, mode, notifications in 60 seconds |
+| `claudeos agents` | Browse, search, and read all 231 agents by category |
+| `claudeos workflow` | Run pre-built multi-agent workflows (`bug-bounty`, `recon`, `wordpress`, etc.) |
+| `claudeos engagement` | Manage bug bounty/pentest workspaces with auto-organized output |
+| `claudeos findings` | SQLite-backed findings tracker with CVSS, status, payouts |
+| `claudeos undo` | Roll back changes made by agents (config files, etc.) |
+| `claudeos diff` | Compare scan results to find what changed |
+| `claudeos screenshot` | Auto-screenshot URLs for PoCs (gowitness/aquatone/chromium) |
+| `claudeos cheatsheet` | Generate one-page reference cards for any agent |
+| `claudeos telegram` | Send alerts and receive commands via Telegram bot |
+
+### Pro Workflow Example
+
+```bash
+# Start a new bug bounty engagement
+claudeos engagement start hackerone-tesla
+
+# Run the full bug bounty workflow against a target
+claudeos workflow bug-bounty tesla.com
+
+# Track findings as you discover them
+claudeos findings add
+
+# See your stats and earnings
+claudeos findings stats
+
+# Get notified on Telegram when scans complete
+claudeos telegram alert success "Recon complete for tesla.com"
+
+# Compare today's recon with yesterday's
+claudeos diff engagement hackerone-tesla
+```
 
 ## Autonomous Features
 

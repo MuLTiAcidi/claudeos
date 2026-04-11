@@ -1,0 +1,218 @@
+#!/bin/bash
+# ClaudeOS — First-Run Setup Wizard
+# Friendly onboarding in 60 seconds
+# Usage: claudeos wizard
+
+CONFIG_DIR="$HOME/.claudeos"
+CONFIG_FILE="$CONFIG_DIR/config.toml"
+mkdir -p "$CONFIG_DIR"
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+clear
+
+cat <<EOF
+${BLUE}${BOLD}
+   ██████╗██╗      █████╗ ██╗   ██╗██████╗ ███████╗ ██████╗ ███████╗
+  ██╔════╝██║     ██╔══██╗██║   ██║██╔══██╗██╔════╝██╔═══██╗██╔════╝
+  ██║     ██║     ███████║██║   ██║██║  ██║█████╗  ██║   ██║███████╗
+  ██║     ██║     ██╔══██║██║   ██║██║  ██║██╔══╝  ██║   ██║╚════██║
+  ╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝███████╗╚██████╔╝███████║
+   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
+${NC}
+                    ${WHITE}${BOLD}First-Run Setup Wizard${NC}
+
+${CYAN}Welcome to ClaudeOS — 200+ specialist agents at your fingertips.${NC}
+${CYAN}This wizard takes about 60 seconds to set up.${NC}
+
+EOF
+
+read -p "Press Enter to begin..." _
+
+echo ""
+echo -e "${BOLD}${BLUE}Step 1 of 5: Who Are You?${NC}"
+echo -e "${CYAN}This helps ClaudeOS pick the right agents and defaults for you.${NC}"
+echo ""
+echo -e "  ${GREEN}1)${NC} Bug Bounty Hunter      ${CYAN}(HackerOne, Bugcrowd, etc.)${NC}"
+echo -e "  ${GREEN}2)${NC} Pentester              ${CYAN}(client engagements, red team)${NC}"
+echo -e "  ${GREEN}3)${NC} Sysadmin / DevOps      ${CYAN}(servers, infra, automation)${NC}"
+echo -e "  ${GREEN}4)${NC} Security Researcher    ${CYAN}(CVE research, exploit dev)${NC}"
+echo -e "  ${GREEN}5)${NC} CTF Player / Student   ${CYAN}(HackTheBox, TryHackMe, learning)${NC}"
+echo -e "  ${GREEN}6)${NC} Developer              ${CYAN}(code, deploy, test)${NC}"
+echo -e "  ${GREEN}7)${NC} Game Server Admin      ${CYAN}(Minecraft, Steam servers)${NC}"
+echo -e "  ${GREEN}8)${NC} Multi-purpose          ${CYAN}(I do a bit of everything)${NC}"
+echo ""
+read -p "Choose [1-8]: " role_choice
+
+case "$role_choice" in
+    1) profile="bug-bounty"; profile_label="Bug Bounty Hunter" ;;
+    2) profile="pentester"; profile_label="Pentester" ;;
+    3) profile="sysadmin"; profile_label="Sysadmin" ;;
+    4) profile="researcher"; profile_label="Security Researcher" ;;
+    5) profile="ctf"; profile_label="CTF / Student" ;;
+    6) profile="developer"; profile_label="Developer" ;;
+    7) profile="gamer"; profile_label="Game Server Admin" ;;
+    *) profile="multi"; profile_label="Multi-purpose" ;;
+esac
+echo -e "${GREEN}✓${NC} Profile: ${BOLD}$profile_label${NC}"
+echo ""
+
+echo -e "${BOLD}${BLUE}Step 2 of 5: Authorization Mode${NC}"
+echo -e "${CYAN}For offensive agents (Black Hat, Red Team, Bug Bounty, Stealth).${NC}"
+echo ""
+echo -e "  ${GREEN}1)${NC} Default Mode  ${CYAN}(one-time confirmation, no paperwork)${NC}"
+echo -e "                ${CYAN}Recommended for bug bounty hunters, CTF, lab owners${NC}"
+echo ""
+echo -e "  ${GREEN}2)${NC} Pro Mode      ${CYAN}(per-engagement scope files, audit trail)${NC}"
+echo -e "                ${CYAN}For paid client pentest engagements${NC}"
+echo ""
+read -p "Choose [1-2]: " mode_choice
+if [ "$mode_choice" = "2" ]; then
+    auth_mode="pro"
+else
+    auth_mode="default"
+fi
+echo -e "${GREEN}✓${NC} Auth mode: ${BOLD}$auth_mode${NC}"
+echo ""
+
+echo -e "${BOLD}${BLUE}Step 3 of 5: Notifications${NC}"
+echo -e "${CYAN}Get alerts when scans finish or critical findings appear.${NC}"
+echo ""
+read -p "Enable Telegram notifications? (y/N): " telegram_yn
+telegram_enabled="false"
+telegram_token=""
+telegram_chat=""
+if [[ "$telegram_yn" =~ ^[Yy]$ ]]; then
+    read -p "  Telegram Bot Token: " telegram_token
+    read -p "  Telegram Chat ID: " telegram_chat
+    telegram_enabled="true"
+    echo -e "${GREEN}✓${NC} Telegram configured"
+else
+    echo -e "${CYAN}  (skipped — you can enable later in $CONFIG_FILE)${NC}"
+fi
+echo ""
+
+echo -e "${BOLD}${BLUE}Step 4 of 5: Anthropic API Key${NC}"
+echo -e "${CYAN}ClaudeOS uses Claude API for AI capabilities.${NC}"
+echo -e "${CYAN}Get a key at: https://console.anthropic.com/${NC}"
+echo ""
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+    echo -e "${GREEN}✓${NC} API key already set in environment"
+    api_key="$ANTHROPIC_API_KEY"
+else
+    read -p "Anthropic API key (or skip): " api_key
+    if [ -n "$api_key" ]; then
+        echo "export ANTHROPIC_API_KEY=\"$api_key\"" >> "$HOME/.bashrc"
+        export ANTHROPIC_API_KEY="$api_key"
+        echo -e "${GREEN}✓${NC} API key saved to ~/.bashrc"
+    else
+        echo -e "${YELLOW}⚠${NC}  Skipped — set ANTHROPIC_API_KEY before using AI features"
+    fi
+fi
+echo ""
+
+echo -e "${BOLD}${BLUE}Step 5 of 5: First Engagement (optional)${NC}"
+echo -e "${CYAN}Want to create your first engagement workspace now?${NC}"
+echo ""
+read -p "Engagement name (or skip): " engagement_name
+if [ -n "$engagement_name" ]; then
+    bash "$(dirname "$0")/claudeos-engagement.sh" start "$engagement_name"
+fi
+echo ""
+
+# Write config file
+cat > "$CONFIG_FILE" <<EOF
+# ClaudeOS Configuration
+# Generated by setup wizard on $(date -Iseconds)
+
+[user]
+profile = "$profile"
+
+[mode]
+pro_mode = $([ "$auth_mode" = "pro" ] && echo "true" || echo "false")
+
+[notifications.telegram]
+enabled = $telegram_enabled
+bot_token = "$telegram_token"
+chat_id = "$telegram_chat"
+
+[paths]
+engagements = "$HOME/.claudeos/engagements"
+findings = "$HOME/.claudeos/findings.db"
+logs = "$HOME/.claudeos/logs"
+EOF
+
+mkdir -p "$HOME/.claudeos/logs"
+
+echo ""
+echo -e "${BOLD}${GREEN}╔═══════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${GREEN}║          🎉 Setup Complete! Welcome to ClaudeOS       ║${NC}"
+echo -e "${BOLD}${GREEN}╚═══════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${BOLD}Your config:${NC} $CONFIG_FILE"
+echo ""
+echo -e "${BOLD}${WHITE}What's next?${NC}"
+echo ""
+
+case "$profile" in
+    bug-bounty)
+        cat <<EOF
+${CYAN}You're set up as a Bug Bounty Hunter. Try these:${NC}
+
+  ${GREEN}claudeos engagement start hackerone-tesla${NC}    Create a workspace
+  ${GREEN}claudeos workflow bug-bounty tesla.com${NC}        Run full BB workflow
+  ${GREEN}claudeos findings add${NC}                         Track a finding
+  ${GREEN}claudeos agents category bug-bounty${NC}           See bug bounty agents
+  ${GREEN}claudeos${NC}                                      Talk to AI assistant
+
+${CYAN}Common tasks:${NC}
+  ${GREEN}claudeos${NC} > "scan example.com for subdomain takeovers"
+  ${GREEN}claudeos${NC} > "find xss on target.com login form"
+  ${GREEN}claudeos${NC} > "test this jwt for vulnerabilities"
+EOF
+        ;;
+    pentester)
+        cat <<EOF
+${CYAN}You're set up as a Pentester. Try these:${NC}
+
+  ${GREEN}claudeos engagement start client-acme${NC}     Create engagement
+  ${GREEN}claudeos workflow ad-pentest 10.0.0.1${NC}     Active Directory pentest
+  ${GREEN}claudeos workflow network-pentest${NC}         Network pentest
+  ${GREEN}claudeos agents category red-team${NC}         See red team agents
+EOF
+        ;;
+    sysadmin)
+        cat <<EOF
+${CYAN}You're set up as a Sysadmin. Try these:${NC}
+
+  ${GREEN}claudeos status${NC}                System health
+  ${GREEN}claudeos workflow harden${NC}       Full hardening sweep
+  ${GREEN}claudeos workflow health-check${NC} Full diagnostic
+  ${GREEN}claudeos${NC} > "set up nginx with SSL for mysite.com"
+  ${GREEN}claudeos${NC} > "back up /var/www to S3 daily"
+EOF
+        ;;
+    *)
+        cat <<EOF
+${CYAN}Try these to get started:${NC}
+
+  ${GREEN}claudeos agents${NC}              Browse all 200+ agents
+  ${GREEN}claudeos workflow${NC}            See available workflows
+  ${GREEN}claudeos${NC}                     Talk to the AI assistant
+  ${GREEN}claudeos help${NC}                Show all commands
+EOF
+        ;;
+esac
+
+echo ""
+echo -e "${CYAN}📖 Architecture: see ARCHITECTURE.md${NC}"
+echo -e "${CYAN}📚 Docs: https://github.com/MuLTiAcidi/claudeos${NC}"
+echo ""

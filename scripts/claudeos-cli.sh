@@ -3,7 +3,8 @@
 # Usage: claudeos [command]
 
 CLAUDEOS_DIR="/opt/claudeos"
-VERSION="1.0.0"
+VERSION="2.0.0"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Colors
 RED='\033[0;31m'
@@ -53,6 +54,20 @@ show_help() {
     echo -e "  ${GREEN}claudeos alerts${NC}           ${ARROW} Recent warnings & alerts"
     echo -e "  ${GREEN}claudeos setup${NC}            ${ARROW} Run setup wizard again"
     echo -e "  ${GREEN}claudeos ai${NC}               ${ARROW} Open Claude AI assistant"
+    echo ""
+    echo -e "${WHITE}${BOLD}Pro Features (v2.0):${NC}"
+    echo ""
+    echo -e "  ${GREEN}claudeos wizard${NC}           ${ARROW} First-run setup wizard"
+    echo -e "  ${GREEN}claudeos agents${NC}           ${ARROW} Browse 200+ specialist agents"
+    echo -e "  ${GREEN}claudeos workflow${NC}         ${ARROW} Run pre-built multi-agent workflows"
+    echo -e "  ${GREEN}claudeos engagement${NC}       ${ARROW} Manage bug bounty / pentest workspaces"
+    echo -e "  ${GREEN}claudeos findings${NC}         ${ARROW} Track findings, CVSS, payouts"
+    echo -e "  ${GREEN}claudeos undo${NC}             ${ARROW} Roll back agent changes"
+    echo -e "  ${GREEN}claudeos diff${NC}             ${ARROW} Compare scan results"
+    echo -e "  ${GREEN}claudeos screenshot${NC}       ${ARROW} Auto-screenshot URLs for PoCs"
+    echo -e "  ${GREEN}claudeos cheatsheet${NC}       ${ARROW} Generate agent cheat sheets"
+    echo -e "  ${GREEN}claudeos telegram${NC}         ${ARROW} Telegram bot bridge"
+    echo ""
     echo -e "  ${GREEN}claudeos help${NC}             ${ARROW} Show this help"
     echo -e "  ${GREEN}claudeos version${NC}          ${ARROW} Show version info"
     echo ""
@@ -388,6 +403,45 @@ case "${1:-}" in
         ;;
     setup)
         bash "$CLAUDEOS_DIR/scripts/first-boot.sh"
+        ;;
+    wizard|onboard)
+        bash "$SCRIPT_DIR/claudeos-wizard.sh"
+        ;;
+    agents|agent)
+        shift
+        bash "$SCRIPT_DIR/claudeos-agents.sh" "$@"
+        ;;
+    workflow|wf)
+        shift
+        bash "$SCRIPT_DIR/claudeos-workflow.sh" "$@"
+        ;;
+    engagement|engage|eng)
+        shift
+        bash "$SCRIPT_DIR/claudeos-engagement.sh" "$@"
+        ;;
+    findings|finding|find)
+        shift
+        bash "$SCRIPT_DIR/claudeos-findings.sh" "$@"
+        ;;
+    undo|rollback)
+        shift
+        bash "$SCRIPT_DIR/claudeos-undo.sh" "$@"
+        ;;
+    diff|compare)
+        shift
+        bash "$SCRIPT_DIR/claudeos-diff.sh" "$@"
+        ;;
+    screenshot|screen|shot)
+        shift
+        bash "$SCRIPT_DIR/claudeos-screenshot.sh" "$@"
+        ;;
+    cheatsheet|cheat)
+        shift
+        bash "$SCRIPT_DIR/claudeos-cheatsheet.sh" "$@"
+        ;;
+    telegram|tg)
+        shift
+        bash "$SCRIPT_DIR/claudeos-telegram.sh" "$@"
         ;;
     ai)
         open_ai

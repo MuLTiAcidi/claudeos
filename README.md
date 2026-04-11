@@ -87,6 +87,42 @@ That's it. ClaudeOS is ready. Type `claudeos` to start.
 | **Multi-Node** | Managing multiple servers | `sudo bash install.sh --multi-node` |
 | **Raspberry Pi** | ARM boards, home servers | `sudo bash install.sh --pi` |
 
+## Architecture — How It Works
+
+ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hidden processes. Everything is Markdown files and bash.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 1: USER          "scan example.com for vulns"   │
+└────────────────────┬────────────────────────────────────┘
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
+│  • Reads your request                                   │
+│  • Picks the right agent(s) from 200 specialists        │
+│  • Coordinates multi-agent workflows                    │
+│  • Verifies authorization for offensive agents          │
+└────────────────────┬────────────────────────────────────┘
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 3: SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)  │
+│  • 200 expert playbooks with real commands              │
+│  • Each one is just a Markdown file                     │
+│  • Loaded on demand by the orchestrator                 │
+└────────────────────┬────────────────────────────────────┘
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 4: COMMAND EXECUTOR  (Claude Code's bash tool)   │
+│  • Actually runs the bash commands                      │
+│  • Asks for confirmation on destructive ops             │
+│  • Logs everything to /var/log/claudeos/actions.log     │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key insight:** Agents are knowledge, not processes. Each agent is a Markdown playbook that the orchestrator loads when needed. Nothing runs in the background. You can read every agent's playbook to know exactly what it will do.
+
+📖 **Full architecture details:** See [ARCHITECTURE.md](ARCHITECTURE.md) for the complete explanation, multi-agent workflow examples, security model, and how to add your own agents.
+
 ## How to Use Agents
 
 ClaudeOS agents are smart specialists. You don't need to call them by name — just describe what you want and ClaudeOS picks the right agent automatically.
@@ -288,9 +324,9 @@ If you're unsure whether you have authorization, **don't run the agent**. When i
 
 ---
 
-## 182 Specialist AI Agents
+## 200 Specialist AI Agents
 
-ClaudeOS ships with **182 specialized AI agents** across 16 categories. Every agent contains real working commands — no simulations.
+ClaudeOS ships with **200 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
 
 <details>
 <summary><b>Core System (9 agents)</b></summary>
@@ -520,6 +556,31 @@ ClaudeOS ships with **182 specialized AI agents** across 16 categories. Every ag
 - **Trace Cleaner** — Clean logs, history, utmp/wtmp
 - **Tunnel Builder** — SSH/socat/stunnel/chisel tunnels
 - **Identity Rotator** — MAC/IP/DNS/hostname rotation
+</details>
+
+<details>
+<summary><b>🏆 Bug Bounty Hunter — Pro Toolkit (18 agents)</b></summary>
+
+> Built by a bug bounty hunter, for bug bounty hunters. Authorized programs only (HackerOne, Bugcrowd, Intigriti, etc.).
+
+- **Subdomain Takeover** — Detect takeover-able subdomains (Subjack, Subzy, dnsReaper, nuclei templates)
+- **JS Analyzer** — Parse JavaScript for endpoints, secrets, API keys (LinkFinder, SecretFinder, JSluice)
+- **XSS Hunter** — XSS testing + blind XSS callback server (dalfox, XSStrike, XSS Hunter Express)
+- **SQLi Hunter** — Deep SQL injection (sqlmap, ghauri, NoSQL injection, WAF bypass)
+- **SSRF Hunter** — SSRF with out-of-band confirmation (interactsh, cloud metadata)
+- **IDOR Hunter** — IDOR/BOLA testing, parameter tampering, ID enumeration
+- **GraphQL Hunter** — Introspection, batching, depth attacks (graphql-cop, InQL, clairvoyance)
+- **JWT Hunter** — JWT vulnerabilities (jwt_tool, none alg, key confusion, kid injection)
+- **CORS Tester** — CORS misconfiguration detection (CORStest, Corsy)
+- **Request Smuggler** — HTTP request smuggling (smuggler, http2smugl, h2cSmuggler)
+- **Race Hunter** — Race condition testing (single-packet attacks, parallel requests)
+- **Cache Poisoner** — Web cache poisoning (Param Miner methodology)
+- **Param Finder** — Find hidden HTTP parameters (Arjun, ParamSpider, x8)
+- **GitHub Recon** — GitHub dorking + secret scanning (trufflehog, gitleaks)
+- **Cloud Recon** — Cloud misconfigs (S3 buckets, IAM, GCP, Azure)
+- **Collaborator** — Self-hosted out-of-band interaction server (interactsh-server)
+- **Nuclei Master** — Manage nuclei templates, custom template creation
+- **Screenshot Hunter** — Mass visual recon (gowitness, aquatone, eyewitness)
 </details>
 
 ## Autonomous Features

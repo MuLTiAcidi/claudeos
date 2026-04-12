@@ -4,7 +4,8 @@
 
 CLAUDEOS_DIR="/opt/claudeos"
 VERSION="2.0.0"
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Resolve symlinks so SCRIPT_DIR points to the real location, not the symlink
+SCRIPT_DIR="$( cd "$( dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")" )" && pwd )"
 
 # Colors
 RED='\033[0;31m'

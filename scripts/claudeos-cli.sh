@@ -443,6 +443,10 @@ case "${1:-}" in
         shift
         bash "$SCRIPT_DIR/claudeos-telegram.sh" "$@"
         ;;
+    improve|self-improve)
+        shift
+        python3 "$SCRIPT_DIR/claudeos-improve.py" "$@"
+        ;;
     ai)
         open_ai
         ;;

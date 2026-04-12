@@ -447,6 +447,10 @@ case "${1:-}" in
         shift
         python3 "$SCRIPT_DIR/claudeos-improve.py" "$@"
         ;;
+    quickscan|scan|qs)
+        shift
+        python3 "$SCRIPT_DIR/claudeos-quickscan.py" "$@"
+        ;;
     ai)
         open_ai
         ;;

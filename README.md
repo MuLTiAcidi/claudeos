@@ -99,7 +99,7 @@ ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hid
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
 │  • Reads your request                                   │
-│  • Picks the right agent(s) from 253 specialists        │
+│  • Picks the right agent(s) from 264 specialists        │
 │  • Coordinates multi-agent workflows                    │
 │  • Verifies authorization for offensive agents          │
 └────────────────────┬────────────────────────────────────┘
@@ -632,11 +632,14 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 </details>
 
 <details>
-<summary><b>🏪 Platform Specialists (3 agents)</b></summary>
+<summary><b>🏪 Platform Specialists (6 agents)</b></summary>
 
 - **Shopify Hunter** — Theme XSS, Liquid SSTI, OAuth scope abuse, checkout flow bypass, customer ATO via password reset poisoning, storefront GraphQL abuse
 - **M365 Attacker** — Microsoft 365 / Azure AD: tenant enum via openid-configuration, MSOLSpray/o365spray password spray, FOCI client pivot, illicit consent grant, ROADtools
 - **Okta Tester** — Okta SSO: tenant fingerprinting, open enrollment, SAML XSW1-XSW8, MFA push-bombing, API token hunting
+- **Account Takeover Hunter** — Full ATO specialist: password reset poisoning, OTP bypass, OAuth flow hijack, session fixation, 2FA bypass, host header injection, mass assignment on user endpoints
+- **E-Commerce Hunter** — Price manipulation, payment bypass, coupon abuse, cart tampering, currency confusion, race conditions on checkout, IDOR on orders/addresses/invoices
+- **JS Endpoint Extractor** — Extracts hidden API endpoints, secrets, tokens, and internal domains from compiled JavaScript bundles in SPAs. Cracks open Nuxt/Next/React/Vue apps that hide their API surface behind compiled JS
 </details>
 
 <details>
@@ -650,12 +653,12 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 
 ## ⚡ Pro Features (v2.0)
 
-ClaudeOS v2 adds 10 new pro features that make managing 253 agents actually pleasant:
+ClaudeOS v2 adds 10 new pro features that make managing 264 agents actually pleasant:
 
 | Command | What it does |
 |---|---|
 | `claudeos wizard` | First-run setup wizard — picks profile, mode, notifications in 60 seconds |
-| `claudeos agents` | Browse, search, and read all 253 agents by category |
+| `claudeos agents` | Browse, search, and read all 264 agents by category |
 | `claudeos workflow` | Run pre-built multi-agent workflows (`bug-bounty`, `recon`, `wordpress`, etc.) |
 | `claudeos engagement` | Manage bug bounty/pentest workspaces with auto-organized output |
 | `claudeos findings` | SQLite-backed findings tracker with CVSS, status, payouts |

@@ -9,281 +9,152 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### AI-Powered Server Management OS
+### 300 AI Agents. One Command. Your Server, Your Rules.
 
-**Manage your Linux servers with natural language. No more memorizing commands.**
+**The largest AI-powered agent system ever built for Linux. Server management, bug bounty hunting, offensive security, and everything in between — all through natural language.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Agents](https://img.shields.io/badge/Agents-300-brightgreen.svg)]()
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04+-orange.svg)]()
 [![Debian](https://img.shields.io/badge/Debian-12+-red.svg)]()
+
+**[Install](#install) | [What It Does](#what-can-it-do) | [All 300 Agents](#-300-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
 
 </div>
 
 ---
 
-## 🛡️ Our Mission
+## The Story
 
-**ClaudeOS is built for defenders, learners, and ethical hackers.**
+ClaudeOS started because memorizing Linux commands is stupid. You shouldn't need to remember `iptables -A INPUT -p tcp --dport 443 -j ACCEPT` when you can just say *"open port 443."*
 
-We built this for the people who want to make systems safer — sysadmins protecting their infrastructure, bug bounty hunters earning legit rewards, students learning in CTFs, pentesters running authorized engagements, and blue teams validating their defenses.
+Then it grew. Bug bounty hunters started using it. They said: *"What if it could also scan for vulnerabilities?"* So we built agents for that. Then pentesters wanted offensive tools. Gamers wanted Minecraft servers. DevOps wanted CI/CD pipelines.
 
-If you want to attack people, steal data, or harm others — **this is not the tool for you.** Unauthorized access is a crime. Real victims pay the price. Walk away.
+Today ClaudeOS has **300 specialist AI agents** covering everything from setting up nginx to cracking WAFs to managing Minecraft servers. Every agent contains real, tested bash commands — not simulations, not theory. Real tools that work on real servers.
 
-For everyone else: welcome. Let's build something that makes the internet a little safer.
+And it keeps getting better. ClaudeOS has a **self-improving engine** — when an agent fails, it detects why, fixes its own playbook, and commits the fix. The system literally learns from its mistakes.
 
 ---
 
-## What is ClaudeOS?
+## What Can It Do?
 
-ClaudeOS turns your Linux server into an AI-managed system. Instead of memorizing hundreds of commands, just tell it what you want in plain English:
-
-```
+```bash
+# Just talk to it
 $ claudeos
-> "install nginx and set up SSL for mysite.com"
-> "why is the server slow right now?"
-> "lock down this server"
-> "migrate the database to the new server"
-> "send me a Telegram alert if disk hits 90%"
+> "harden this server"
+> "why is the database slow?"
+> "scan example.com for vulnerabilities"
+> "set up a Minecraft server with 8GB RAM"
+> "find XSS on this website"
+> "deploy my app from GitHub with zero downtime"
+> "alert me on Telegram if CPU hits 90%"
 ```
 
-It handles everything — from installing packages to security hardening, from backups to performance optimization.
+### Quick Examples
+
+| You say... | ClaudeOS does... |
+|---|---|
+| *"update everything"* | Runs apt update, upgrades packages, checks for reboot |
+| *"why is nginx throwing 502?"* | Reads logs, diagnoses upstream issue, suggests fix |
+| *"scan my server for vulnerabilities"* | Runs full CVE scan, checks configs, reports findings |
+| *"test this site for CORS bugs"* | Runs 7-origin CORS chain test, generates PoC if found |
+| *"crack this WAF"* | Fingerprints WAF vendor, runs vendor-specific bypass techniques |
+| *"decompile this APK and find secrets"* | jadx decompile, extracts API keys, Firebase URLs, endpoints |
+| *"back up everything to S3"* | Configures rsnapshot, S3 sync, cron schedule, retention |
+| *"set up CS2 server for 20 players"* | SteamCMD install, config, firewall rules, auto-restart |
+
+---
 
 ## Install
 
-### Option 1 — On existing Ubuntu/Debian (recommended)
+### Quick Install (Ubuntu/Debian)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 ```
 
-### Option 2 — Fresh install from ISO (bare metal)
-Download the latest ISO from [Releases](https://github.com/MuLTiAcidi/claudeos/releases), or build it yourself:
-
+### From Source
 ```bash
-# Build ISO (requires Docker on an amd64 Linux machine)
 git clone https://github.com/MuLTiAcidi/claudeos.git
-cd claudeos/iso-builder
-bash build-in-docker.sh
-# Output: output/claudeos.iso
+cd claudeos
+sudo bash install.sh
 ```
 
+### ISO Install (Bare Metal)
 ```bash
-# Flash to USB (replace /dev/sdX with your USB drive)
-dd if=claudeos.iso of=/dev/sdX bs=4M status=progress
-# Or use balenaEtcher (GUI tool)
+cd iso-builder && bash build-in-docker.sh
+# Flash output/claudeos.iso to USB → boot → install
 ```
 
-Boot from USB → Install → On first boot, ClaudeOS setup wizard runs automatically.
+### Editions
 
-That's it. ClaudeOS is ready. Type `claudeos` to start.
+| Edition | For | Install Flag |
+|---|---|---|
+| Server | VPS, cloud, headless | `--server` (default) |
+| Dashboard | Remote management via browser | `--dashboard` |
+| Desktop | Workstations with monitors | `--desktop` |
+| Kiosk | Monitoring screens | `--kiosk` |
+| Multi-Node | Managing server fleets | `--multi-node` |
+| Raspberry Pi | ARM boards, home servers | `--pi` |
 
-## Editions
-
-| Edition | Best For | Install |
-|---------|----------|---------|
-| **Server** | VPS, cloud servers, headless machines | `sudo bash install.sh` |
-| **Web Dashboard** | Remote management from any browser | `sudo bash install.sh --dashboard` |
-| **Desktop** | Workstations with monitors | `sudo bash install.sh --desktop` |
-| **Kiosk** | Office monitoring screens | `sudo bash install.sh --kiosk` |
-| **Multi-Node** | Managing multiple servers | `sudo bash install.sh --multi-node` |
-| **Raspberry Pi** | ARM boards, home servers | `sudo bash install.sh --pi` |
-
-## Architecture — How It Works
-
-ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hidden processes. Everything is Markdown files and bash.
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  LAYER 1: USER          "scan example.com for vulns"   │
-└────────────────────┬────────────────────────────────────┘
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
-│  • Reads your request                                   │
-│  • Picks the right agent(s) from 300 specialists        │
-│  • Coordinates multi-agent workflows                    │
-│  • Verifies authorization for offensive agents          │
-└────────────────────┬────────────────────────────────────┘
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│  LAYER 3: SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)  │
-│  • 253 expert playbooks with real commands              │
-│  • Each one is just a Markdown file                     │
-│  • Loaded on demand by the orchestrator                 │
-└────────────────────┬────────────────────────────────────┘
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│  LAYER 4: COMMAND EXECUTOR  (Claude Code's bash tool)   │
-│  • Actually runs the bash commands                      │
-│  • Asks for confirmation on destructive ops             │
-│  • Logs everything to /var/log/claudeos/actions.log     │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Key insight:** Agents are knowledge, not processes. Each agent is a Markdown playbook that the orchestrator loads when needed. Nothing runs in the background. You can read every agent's playbook to know exactly what it will do.
-
-📖 **Full architecture details:** See [ARCHITECTURE.md](ARCHITECTURE.md) for the complete explanation, multi-agent workflow examples, security model, and how to add your own agents.
-
-## How to Use Agents
-
-ClaudeOS agents are smart specialists. You don't need to call them by name — just describe what you want and ClaudeOS picks the right agent automatically.
-
-### The 3 Ways to Use Agents
-
-**1. Natural language (easiest)** — Just talk to ClaudeOS:
-```bash
-$ claudeos
-> "scan my server for vulnerabilities"          # → vulnerability-scanner
-> "set up a Minecraft server with 8GB RAM"      # → minecraft-server
-> "back up the database every 6 hours"          # → backup + cron-master
-> "my nginx is throwing 502 errors, fix it"     # → log-doctor + config-fixer
-> "harden this server against attacks"          # → config-hardener + security
-```
-
-**2. Call an agent directly** — When you know what you want:
-```bash
-$ claudeos
-> "use the wifi-breaker agent to audit my office wifi"
-> "ask the report-writer to generate a pentest report from today's findings"
-> "have the chaos-tester run a network failure test on staging"
-```
-
-**3. Chain multiple agents** — For complex workflows:
-```bash
-$ claudeos
-> "use recon-master to scan example.com, then vuln-weaponizer to find exploits,
-   then report-writer to document everything"
-```
-
-### Agent Categories at a Glance
-
-| Need to... | Use these agents |
-|---|---|
-| Manage daily server operations | Core System, Infrastructure, Monitoring |
-| Audit security defensively | White Hat (vulnerability-scanner, security-auditor, ssl-tester) |
-| Pentest your own systems | Grey Hat, Black Hat, Red Team (authorized only) |
-| Write or fix code | Coder agents (code-generator, debugger, refactorer) |
-| Auto-fix broken things | Fixer agents (auto-healer, log-doctor, network-healer) |
-| Keep services online 24/7 | Always Up agents (uptime-guardian, failover-manager) |
-| Run game servers | Gamer agents (minecraft-server, steam-server) |
-| Automate repetitive tasks | Automation agents (cron-master, deploy-automator) |
-
-### Agent Files
-
-Every agent lives at `agents/{agent-name}/CLAUDE.md` and contains:
-- **Safety rules** — what the agent will and won't do
-- **Real commands** — every bash command is tested and ready to run
-- **Workflows** — common task templates
-- **Troubleshooting** — fix common issues
-
-You can read any agent's CLAUDE.md to learn what it can do:
-```bash
-cat /opt/claudeos/agents/vulnerability-scanner/CLAUDE.md
-```
-
-### Safety First
-
-Agents marked with ⚠️ (Black Hat, Red Team, Stealth, Bug Bounty) are powerful offensive tools. ClaudeOS uses a **simple, common-sense approach** to authorization — no PDFs, no contracts, no bureaucracy for the 95% of users who are bug bounty hunters, CTF players, or lab owners.
-
-#### The Default: One-Time Confirmation
-
-The first time you run an offensive agent, ClaudeOS asks you **once**:
-
-```
-> Are you authorized to test [target]?
-> Type one of:
->   1) bug-bounty   (HackerOne, Bugcrowd, Intigriti, YesWeHack, etc.)
->   2) ctf          (HackTheBox, TryHackMe, VulnHub, lab platform)
->   3) own          (my own server/VPS/home lab)
->   4) client       (paid pentest engagement — see Pro Mode below)
->   5) research     (security research on systems I'm authorized to test)
->   no              (cancel)
-```
-
-Type 1, 2, 3, or 5 → ClaudeOS proceeds. Done. Logged to `/var/log/claudeos/actions.log`. No documents required.
-
-That's it. No forms. No PDFs. No lawyers.
-
-#### Why This Works
-
-- **Bug bounty hunters** — your authorization is the program's scope page on HackerOne. ClaudeOS trusts you to read it.
-- **CTF players** — the platform itself is your authorization. Just play.
-- **Home lab owners** — you own it, you can break it.
-- **Security researchers** — you know your scope.
-
-ClaudeOS is a tool. **You** are responsible for being honest about your authorization. Lying to ClaudeOS to attack systems you don't own is illegal and on you, not the tool.
-
-#### Pro Mode (Optional — for paid client engagements)
-
-If you're a professional pentester running paid engagements where legal liability matters, you can opt into **Pro Mode**. This is for the ~5% of users who need a real audit trail.
-
-Enable in `/etc/claudeos/config.toml`:
-```toml
-[mode]
-pro_mode = true
-```
-
-In Pro Mode, ClaudeOS expects per-engagement scope files at:
-```
-/etc/claudeos/engagements/{name}/
-├── scope.txt          # In-scope targets (one per line)
-├── out-of-scope.txt   # Off-limits targets
-├── start-date         # YYYY-MM-DD
-└── end-date           # YYYY-MM-DD
-```
-
-Then ClaudeOS auto-validates every offensive action against the active engagement. Enterprise pentesters get the audit trail they need without making life harder for everyone else.
-
-#### What ClaudeOS Always Does
-
-- **Logs every action** to `/var/log/claudeos/actions.log` (regardless of mode)
-- **Confirms destructive operations** (`rm -rf`, format, drop database, etc.)
-- **Refuses to attack systems you didn't authorize** (no surprise targets)
-- **Provides cleanup procedures** for stealth/red team agents
-
-#### What ClaudeOS Will NOT Do
-
-- ❌ Run offensive agents without your one-time confirmation
-- ❌ Hide its actions from logs
-- ❌ Help with malware distribution or unauthorized access
-- ❌ Pretend you have authorization when you don't
-
-#### Legal Reminder (the short version)
-
-Testing systems without authorization is illegal almost everywhere. **You are responsible** for staying within scope. ClaudeOS is a tool — the ethics and legality are on the operator.
-
-**If you're not sure you have permission, don't run the agent.** Ask the system owner. Read the bug bounty program rules. Use your judgment.
-
-### Common Examples
-
-```bash
-# Daily operations
-> "show me anything weird in today's logs"           # log-aggregator
-> "what services are using too much memory?"         # monitoring + process-forensics
-> "update everything but keep nginx pinned"          # update-manager
-
-# Security
-> "check my SSL certs and renew anything expiring"   # ssl-watchdog + ssl-tester
-> "audit who has sudo access on this server"        # access-auditor
-> "harden this fresh install"                        # config-hardener
-
-# Recovery
-> "the database crashed, recover it"                 # database-repair
-> "fix my broken DNS"                                # network-healer
-> "GRUB won't boot, help"                            # boot-fixer
-
-# Automation
-> "deploy the main branch from github every push"   # deploy-automator + webhook-listener
-> "alert me on Telegram if disk hits 85%"           # event-reactor + notification-router
-```
+**Requirements:** Ubuntu 22.04+ or Debian 12+, 512MB RAM, 5GB disk, Node.js 20+
 
 ---
 
-## 253 Specialist AI Agents
+## Architecture
 
-ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every agent contains real working commands — no simulations. The largest agent ecosystem ever built for a Linux distribution.
+ClaudeOS has **4 layers**. No daemons. No message buses. Everything is Markdown files and bash.
+
+```
+┌───────────────────────────────────────────────────────┐
+│  YOU        "scan this server for vulns"              │
+└──────────────────────┬────────────────────────────────┘
+                       ▼
+┌───────────────────────────────────────────────────────┐
+│  ORCHESTRATOR  (CLAUDE.md)                            │
+│  Reads your request → picks the right agent(s) →     │
+│  coordinates multi-agent workflows                   │
+└──────────────────────┬────────────────────────────────┘
+                       ▼
+┌───────────────────────────────────────────────────────┐
+│  300 SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)     │
+│  Each one is a Markdown playbook with real commands   │
+│  Loaded on demand. Nothing runs in the background.   │
+└──────────────────────┬────────────────────────────────┘
+                       ▼
+┌───────────────────────────────────────────────────────┐
+│  BASH EXECUTOR  (Claude Code's terminal)              │
+│  Runs commands, confirms destructive ops, logs all   │
+└───────────────────────────────────────────────────────┘
+```
+
+**Key insight:** Agents are knowledge, not processes. Each agent is a Markdown file full of expert knowledge and real commands. You can read any agent to see exactly what it will do. No black boxes.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical breakdown.
+
+---
+
+## Bug Bounty — Proven in the Field
+
+ClaudeOS isn't theoretical. It's been used on **real HackerOne programs** and found **real vulnerabilities**:
+
+- **CORS data exfiltration** on an adult platform — user favorites and viewing history exposed cross-origin (submitted to H1)
+- **Unauthenticated admin config center** on OPPO's e-commerce platform — H1 pre-check rated it **CRITICAL (CVSS 9.9)** (submitted to H1)
+- **CORS vulnerability (CVSS 8.1)** on a major identity verification platform (submitted to H1, report #3668556)
+- **7 security findings** on a major chat platform (disclosed via responsible disclosure)
+- **HTML injection** on a major European e-commerce platform (browser-verified)
+
+The tools we use to hunt are the tools we ship. Every agent in the Bug Bounty, WAF Warfare, and Extractor categories was born from real hunting sessions where we needed a tool that didn't exist — so we built it.
+
+---
+
+## 300 Specialist Agents
+
+The largest agent collection ever built for a Linux system. Every agent contains **real working commands** — no simulations. Organized into sectors:
+
+### System Management (52 agents)
 
 <details>
-<summary><b>Core System (9 agents)</b></summary>
+<summary><b>Core System (9)</b> — Package, service, network, monitoring, backup, cron, user, security, auto-pilot</summary>
 
 - **Package Manager** — Install, update, remove software
 - **Service Manager** — Manage systemd services
@@ -297,18 +168,18 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 </details>
 
 <details>
-<summary><b>Infrastructure (6 agents)</b></summary>
+<summary><b>Infrastructure (6)</b> — Docker, database, web server, DNS, mail, WHMCS</summary>
 
 - **Docker Manager** — Containers, compose, images, volumes
 - **Database Agent** — MySQL/PostgreSQL tuning, queries, replication
 - **Web Server Agent** — Nginx/Apache vhosts, SSL, performance
 - **DNS Manager** — DNS zones, records, Cloudflare/Route53
 - **Mail Server** — Postfix/Dovecot, spam, DKIM/SPF/DMARC
-- **WHMCS Doctor** — WHMCS incident response: stuck crons, metadata locks, log table pruning, email queue diagnosis
+- **WHMCS Doctor** — WHMCS incident response: stuck crons, metadata locks, log table pruning
 </details>
 
 <details>
-<summary><b>Intelligence (4 agents)</b></summary>
+<summary><b>Intelligence (4)</b> — Incident response, performance, cost, migration</summary>
 
 - **Incident Responder** — Root cause analysis, playbooks, post-mortems
 - **Performance Tuner** — Sysctl, MySQL, Nginx, PHP-FPM optimization
@@ -317,7 +188,7 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 </details>
 
 <details>
-<summary><b>DevOps (3 agents)</b></summary>
+<summary><b>DevOps (3)</b> — Git deploy, environment, multi-server</summary>
 
 - **Git Deploy** — CI/CD, zero-downtime deploys, rollback
 - **Environment Manager** — .env files, secrets, variables
@@ -325,7 +196,7 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 </details>
 
 <details>
-<summary><b>Monitoring & Alerts (5 agents)</b></summary>
+<summary><b>Monitoring & Alerts (5)</b> — Notifications, logs, SSL, snapshots, compliance</summary>
 
 - **Notifications** — Telegram, email, Slack, Discord alerts
 - **Log Aggregator** — Centralized log search and analysis
@@ -335,7 +206,7 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 </details>
 
 <details>
-<summary><b>Advanced Operations (6 agents)</b></summary>
+<summary><b>Advanced Operations (6)</b> — Firewall viz, crontab audit, process forensics, capacity, API gateway, containers</summary>
 
 - **Firewall Visualizer** — Map rules, detect conflicts
 - **Crontab Auditor** — Find dead jobs, optimize scheduling
@@ -346,131 +217,21 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 </details>
 
 <details>
-<summary><b>White Hat — Ethical Security (13 agents)</b></summary>
+<summary><b>Network & Infrastructure (9)</b> — VPN, proxy, bandwidth, k8s, cloud, firewall, files, profiler, updates</summary>
 
-- **Vulnerability Scanner** — Automated CVE scanning across packages
-- **Security Auditor** — CIS benchmarks, Lynis, OpenSCAP audits
-- **Password Auditor** — Test password strength across accounts
-- **Web App Scanner** — OWASP Top 10 testing (Nikto, sqlmap, gobuster)
-- **SSL Tester** — Deep TLS analysis, cipher suites, vulnerabilities
-- **Network Mapper** — Topology discovery, port inventory (nmap, masscan)
-- **Patch Validator** — Verify security patches are applied
-- **Log Forensics** — Detect suspicious patterns in system logs
-- **Config Hardener** — Auto-harden SSH, kernel, services
-- **Access Auditor** — Audit users, sudo, SUID, ACLs
-- **Encryption Enforcer** — LUKS, TLS, GPG enforcement
-- **Compliance Checker** — PCI-DSS, HIPAA, SOC2, GDPR validation
-- **Incident Logger** — Real-time incident logging with chain of custody
+- **VPN Manager** — WireGuard, OpenVPN setup and management
+- **Proxy Manager** — Nginx, HAProxy, SOCKS5, Tor, Privoxy
+- **Bandwidth Monitor** — Real traffic monitoring and throttling
+- **Cluster Manager** — Kubernetes (kubeadm, k3s), Docker Swarm
+- **Cloud Deployer** — AWS, GCP, Azure, DigitalOcean, Terraform
+- **Firewall Architect** — Complex iptables/nftables/UFW rulesets
+- **File Manager** — Advanced file ops, search, bulk operations
+- **System Profiler** — Hardware inventory and benchmarking
+- **Update Manager** — OS updates with snapshots and rollback
 </details>
 
 <details>
-<summary><b>Grey Hat — Security Research (11 agents)</b></summary>
-
-- **Zero Day Hunter** — Fuzz with AFL++, libFuzzer, Boofuzz
-- **Reverse Engineer** — Binary analysis with radare2, Ghidra, strings
-- **Traffic Analyzer** — Deep packet inspection (tcpdump, tshark)
-- **Exploit Researcher** — Searchsploit, Metasploit, CVE research
-- **Bug Bounty Hunter** — Subfinder, amass, httpx, nuclei pipelines
-- **Credential Tester** — Hydra, medusa, CrackMapExec
-- **WiFi Breaker** — Aircrack-ng suite, hashcat WPA cracking
-- **DNS Poisoner** — DNS spoofing, cache poisoning testing
-- **Session Hijacker** — Bettercap, mitmproxy, token analysis
-- **API Fuzzer** — ffuf, wfuzz, GraphQL/REST fuzzing
-- **OSINT Gatherer** — theHarvester, Shodan, recon-ng, SpiderFoot
-</details>
-
-<details>
-<summary><b>Black Hat — Offensive Security (12 agents)</b></summary>
-
-> ⚠️ **For authorized penetration testing engagements only.**
-
-- **Attack Chain** — Multi-stage real attack workflows
-- **Malware Analyst** — Reverse engineer and dissect malware
-- **Data Exfiltrator** — DNS/ICMP/steganography exfil testing
-- **Ransomware Tester** — Real backup recovery validation
-- **APT Operator** — Long-term persistent access campaigns
-- **Social Engineer** — GoPhish, SET, real phishing tests
-- **Backdoor Hunter** — Find and plant test backdoors
-- **Keylogger Deployer** — Logkeys, PAM tty_audit, evdev
-- **Rootkit Builder** — LKM/userspace rootkits, detection testing
-- **C2 Operator** — Sliver, Mythic, custom C2 frameworks
-- **Cryptojacker** — Mining injection and detection testing
-- **Supply Chain Attacker** — Dependency confusion, typosquatting
-</details>
-
-<details>
-<summary><b>Red Team — Combined Operations (15 agents)</b></summary>
-
-- **Red Commander** — Orchestrate full red team operations
-- **Attack Planner** — Multi-vector attack strategy planning
-- **Defense Breaker** — Bypass firewalls, IDS, WAF, EDR
-- **Tool Forge** — Build custom exploit tools and payloads
-- **Recon Master** — Deep recon, OSINT, fingerprinting
-- **Persistence Agent** — Maintain access (cron, systemd, PAM, kernel)
-- **Lateral Mover** — SSH pivoting, proxychains, network pivoting
-- **Exfil Operator** — Multi-channel data extraction
-- **Evasion Engine** — Real-time AV/IDS/WAF/EDR bypass
-- **Implant Builder** — Custom RATs and implants in C/Python/Go
-- **Vuln Weaponizer** — Turn CVEs into working exploits
-- **Phishing Operator** — Real phishing campaigns with GoPhish
-- **Report Writer** — Pro pentest reports with CVSS scoring
-- **Blue Team Tester** — Purple team exercises with Atomic Red Team
-- **Arsenal Manager** — Tool inventory mapped to MITRE ATT&CK
-</details>
-
-<details>
-<summary><b>Coder — Development (8 agents)</b></summary>
-
-- **Code Generator** — Scaffold projects (Node, Python, Go, Rust)
-- **Debugger** — gdb, strace, valgrind, perf profiling
-- **Refactorer** — Complexity analysis, dead code, AST refactoring
-- **API Designer** — OpenAPI, GraphQL, REST design
-- **Database Designer** — Schema design, migrations, optimization
-- **Test Writer** — pytest, Jest, Go testing, coverage
-- **Dependency Manager** — npm/pip/cargo audit, updates
-- **Doc Generator** — Sphinx, JSDoc, godoc, MkDocs
-</details>
-
-<details>
-<summary><b>Fixer — Auto-Repair (7 agents)</b></summary>
-
-- **Auto Healer** — Self-heal failing services
-- **Config Fixer** — Detect and fix misconfigurations
-- **Dependency Resolver** — Fix broken apt/pip/npm dependencies
-- **Log Doctor** — Diagnose issues from log patterns
-- **Network Healer** — Auto-fix DNS, routing, firewall, DHCP
-- **Boot Fixer** — GRUB, initramfs, fstab repair
-- **Database Repair** — MySQL/PostgreSQL/MongoDB recovery
-</details>
-
-<details>
-<summary><b>Always Up — Uptime & Resilience (8 agents)</b></summary>
-
-- **Uptime Guardian** — 24/7 monitoring with instant alerts
-- **Failover Manager** — Keepalived/VRRP, HAProxy failover
-- **Load Balancer** — Nginx/HAProxy load balancing
-- **Chaos Tester** — Real chaos engineering with stress-ng, tc netem
-- **DDoS Shield** — Detection and automatic mitigation
-- **Auto Restarter** — Smart restart with backoff strategies
-- **Redundancy Manager** — DRBD, GlusterFS, Pacemaker, replicas
-- **Heartbeat Monitor** — Lightweight ICMP/TCP/HTTP checks
-</details>
-
-<details>
-<summary><b>Gamer — Game Server Management (8 agents)</b></summary>
-
-- **Game Server Manager** — Universal game server lifecycle
-- **Minecraft Server** — Paper/Spigot/Fabric, plugins, JVM tuning
-- **Steam Server** — SteamCMD games (CS2, Valheim, Rust, ARK)
-- **Game Performance** — Tick rate, FPS, Aikar's flags
-- **Player Manager** — Bans, whitelists, RCON, LuckPerms
-- **Mod Manager** — Workshop downloads, conflict resolution
-- **Game Backup** — Hot world backups, rsnapshot, S3 sync
-- **Discord Bot Manager** — Game ↔ Discord bridge bots
-</details>
-
-<details>
-<summary><b>Automation (15 agents)</b></summary>
+<summary><b>Automation (15)</b> — Scripts, cron, webhooks, tasks, file watch, events, API, email, reports, deploy, notifications, retry, triggers, batch</summary>
 
 - **Script Builder** — Generate bash/python automation scripts
 - **Cron Master** — Advanced cron orchestration with dependencies
@@ -489,258 +250,476 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 - **Batch Processor** — Parallel batch jobs across servers
 </details>
 
-<details>
-<summary><b>Network & Infrastructure (9 agents)</b></summary>
+### Development (8 agents)
 
-- **VPN Manager** — WireGuard, OpenVPN setup and management
-- **Proxy Manager** — Nginx, HAProxy, SOCKS5, Tor, Privoxy
-- **Bandwidth Monitor** — Real traffic monitoring and throttling
-- **Cluster Manager** — Kubernetes (kubeadm, k3s), Docker Swarm
-- **Cloud Deployer** — AWS, GCP, Azure, DigitalOcean, Terraform
-- **Firewall Architect** — Complex iptables/nftables/UFW rulesets
-- **File Manager** — Advanced file ops, search, bulk operations
-- **System Profiler** — Hardware inventory and benchmarking
-- **Update Manager** — OS updates with snapshots and rollback
+<details>
+<summary><b>Coder (8)</b> — Code gen, debug, refactor, API design, DB design, testing, deps, docs</summary>
+
+- **Code Generator** — Scaffold projects (Node, Python, Go, Rust)
+- **Debugger** — gdb, strace, valgrind, perf profiling
+- **Refactorer** — Complexity analysis, dead code, AST refactoring
+- **API Designer** — OpenAPI, GraphQL, REST design
+- **Database Designer** — Schema design, migrations, optimization
+- **Test Writer** — pytest, Jest, Go testing, coverage
+- **Dependency Manager** — npm/pip/cargo audit, updates
+- **Doc Generator** — Sphinx, JSDoc, godoc, MkDocs
+</details>
+
+### Auto-Repair (7 agents)
+
+<details>
+<summary><b>Fixer (7)</b> — Auto-heal, config fix, deps, logs, network, boot, database</summary>
+
+- **Auto Healer** — Self-heal failing services
+- **Config Fixer** — Detect and fix misconfigurations
+- **Dependency Resolver** — Fix broken apt/pip/npm dependencies
+- **Log Doctor** — Diagnose issues from log patterns
+- **Network Healer** — Auto-fix DNS, routing, firewall, DHCP
+- **Boot Fixer** — GRUB, initramfs, fstab repair
+- **Database Repair** — MySQL/PostgreSQL/MongoDB recovery
+</details>
+
+### Uptime & Resilience (8 agents)
+
+<details>
+<summary><b>Always Up (8)</b> — Monitoring, failover, load balancing, chaos, DDoS, restart, redundancy, heartbeat</summary>
+
+- **Uptime Guardian** — 24/7 monitoring with instant alerts
+- **Failover Manager** — Keepalived/VRRP, HAProxy failover
+- **Load Balancer** — Nginx/HAProxy load balancing
+- **Chaos Tester** — Real chaos engineering with stress-ng, tc netem
+- **DDoS Shield** — Detection and automatic mitigation
+- **Auto Restarter** — Smart restart with backoff strategies
+- **Redundancy Manager** — DRBD, GlusterFS, Pacemaker, replicas
+- **Heartbeat Monitor** — Lightweight ICMP/TCP/HTTP checks
+</details>
+
+### Game Servers (8 agents)
+
+<details>
+<summary><b>Gamer (8)</b> — Universal game server, Minecraft, Steam/CS2, performance, players, mods, backups, Discord</summary>
+
+- **Game Server Manager** — Universal game server lifecycle
+- **Minecraft Server** — Paper/Spigot/Fabric, plugins, JVM tuning
+- **Steam Server** — SteamCMD games (CS2, Valheim, Rust, ARK)
+- **Game Performance** — Tick rate, FPS, Aikar's flags
+- **Player Manager** — Bans, whitelists, RCON, LuckPerms
+- **Mod Manager** — Workshop downloads, conflict resolution
+- **Game Backup** — Hot world backups, rsnapshot, S3 sync
+- **Discord Bot Manager** — Game-Discord bridge bots
+</details>
+
+---
+
+### Security — Defensive (13 agents)
+
+<details>
+<summary><b>White Hat (13)</b> — Vulnerability scanning, auditing, hardening, compliance</summary>
+
+- **Vulnerability Scanner** — Automated CVE scanning
+- **Security Auditor** — CIS benchmarks, Lynis, OpenSCAP
+- **Password Auditor** — Test password strength
+- **Web App Scanner** — OWASP Top 10 testing
+- **SSL Tester** — Deep TLS analysis, cipher suites
+- **Network Mapper** — nmap, masscan, topology discovery
+- **Patch Validator** — Verify security patches
+- **Log Forensics** — Detect suspicious patterns
+- **Config Hardener** — Auto-harden SSH, kernel, services
+- **Access Auditor** — Users, sudo, SUID, ACLs
+- **Encryption Enforcer** — LUKS, TLS, GPG enforcement
+- **Compliance Checker** — PCI-DSS, HIPAA, SOC2, GDPR
+- **Incident Logger** — Real-time logging with chain of custody
+</details>
+
+### Security — Offensive (41 agents)
+
+> All offensive agents require authorization. See [Safety & Authorization](#safety--authorization).
+
+<details>
+<summary><b>Grey Hat — Security Research (11)</b></summary>
+
+- **Zero Day Hunter** — AFL++, libFuzzer, Boofuzz fuzzing
+- **Reverse Engineer** — radare2, Ghidra binary analysis
+- **Traffic Analyzer** — tcpdump, tshark deep packet inspection
+- **Exploit Researcher** — Searchsploit, Metasploit, CVE research
+- **Bug Bounty Hunter** — Subfinder, amass, httpx, nuclei pipelines
+- **Credential Tester** — Hydra, medusa, CrackMapExec
+- **WiFi Breaker** — Aircrack-ng, hashcat WPA cracking
+- **DNS Poisoner** — DNS spoofing, cache poisoning
+- **Session Hijacker** — Bettercap, mitmproxy, token analysis
+- **API Fuzzer** — ffuf, wfuzz, GraphQL/REST fuzzing
+- **OSINT Gatherer** — theHarvester, Shodan, recon-ng
 </details>
 
 <details>
-<summary><b>Stealth — Authorized Red Team (3 agents)</b></summary>
+<summary><b>Black Hat — Offensive Security (12)</b></summary>
 
-> ⚠️ **For authorized red team engagements only.**
-
-- **Trace Cleaner** — Clean logs, history, utmp/wtmp
-- **Tunnel Builder** — SSH/socat/stunnel/chisel tunnels
-- **Identity Rotator** — MAC/IP/DNS/hostname rotation
+- **Attack Chain** — Multi-stage attack workflows
+- **Malware Analyst** — Reverse engineer malware
+- **Data Exfiltrator** — DNS/ICMP/stego exfil testing
+- **Ransomware Tester** — Backup recovery validation
+- **APT Operator** — Persistent access campaigns
+- **Social Engineer** — GoPhish, SET, phishing tests
+- **Backdoor Hunter** — Find and plant test backdoors
+- **Keylogger Deployer** — Logkeys, PAM tty_audit
+- **Rootkit Builder** — LKM/userspace rootkits
+- **C2 Operator** — Sliver, Mythic, custom C2
+- **Cryptojacker** — Mining injection/detection
+- **Supply Chain Attacker** — Dependency confusion
 </details>
 
 <details>
-<summary><b>🏆 Bug Bounty Hunter — Pro Toolkit (18 agents)</b></summary>
+<summary><b>Red Team (15)</b> — Full red team operations</summary>
 
-> Built by a bug bounty hunter, for bug bounty hunters. Authorized programs only (HackerOne, Bugcrowd, Intigriti, etc.).
-
-- **Subdomain Takeover** — Detect takeover-able subdomains (Subjack, Subzy, dnsReaper, nuclei templates)
-- **JS Analyzer** — Parse JavaScript for endpoints, secrets, API keys (LinkFinder, SecretFinder, JSluice)
-- **XSS Hunter** — XSS testing + blind XSS callback server (dalfox, XSStrike, XSS Hunter Express)
-- **SQLi Hunter** — Deep SQL injection (sqlmap, ghauri, NoSQL injection, WAF bypass)
-- **SSRF Hunter** — SSRF with out-of-band confirmation (interactsh, cloud metadata)
-- **IDOR Hunter** — IDOR/BOLA testing, parameter tampering, ID enumeration
-- **GraphQL Hunter** — Introspection, batching, depth attacks (graphql-cop, InQL, clairvoyance)
-- **JWT Hunter** — JWT vulnerabilities (jwt_tool, none alg, key confusion, kid injection)
-- **CORS Tester** — CORS misconfiguration detection (CORStest, Corsy)
-- **Request Smuggler** — HTTP request smuggling (smuggler, http2smugl, h2cSmuggler)
-- **Race Hunter** — Race condition testing (single-packet attacks, parallel requests)
-- **Cache Poisoner** — Web cache poisoning (Param Miner methodology)
-- **Param Finder** — Find hidden HTTP parameters (Arjun, ParamSpider, x8)
-- **GitHub Recon** — GitHub dorking + secret scanning (trufflehog, gitleaks)
-- **Cloud Recon** — Cloud misconfigs (S3 buckets, IAM, GCP, Azure)
-- **Collaborator** — Self-hosted out-of-band interaction server (interactsh-server)
-- **Nuclei Master** — Manage nuclei templates, custom template creation
-- **Screenshot Hunter** — Mass visual recon (gowitness, aquatone, eyewitness)
-- **Payload Crafter** — Custom exploit payloads, shellcode, webshells
+- **Red Commander** — Orchestrate full operations
+- **Attack Planner** — Multi-vector strategy
+- **Defense Breaker** — Bypass firewalls, IDS, WAF, EDR
+- **Tool Forge** — Build custom exploits
+- **Recon Master** — Deep OSINT, fingerprinting
+- **Persistence Agent** — Maintain access
+- **Lateral Mover** — SSH/network pivoting
+- **Exfil Operator** — Multi-channel extraction
+- **Evasion Engine** — AV/IDS/WAF/EDR bypass
+- **Implant Builder** — Custom RATs
+- **Vuln Weaponizer** — CVEs to exploits
+- **Phishing Operator** — GoPhish campaigns
+- **Report Writer** — Pro pentest reports
+- **Blue Team Tester** — Purple team exercises
+- **Arsenal Manager** — MITRE ATT&CK mapping
 </details>
 
 <details>
-<summary><b>🎯 Advanced Bug Bounty (8 agents)</b></summary>
+<summary><b>Stealth (3)</b> — Authorized red team only</summary>
 
-> The vuln class specialists every BB hunter needs.
+- **Trace Cleaner** — Clean logs, history
+- **Tunnel Builder** — SSH/socat/chisel tunnels
+- **Identity Rotator** — MAC/IP/DNS rotation
+</details>
 
-- **XXE Hunter** — XML External Entity attacks (file read, blind, OOB, SSRF)
-- **SSTI Hunter** — Server-Side Template Injection (Jinja, Twig, Velocity, Freemarker)
-- **LFI Hunter** — Local File Inclusion + log poisoning + PHP filter chains
-- **Deserialization Hunter** — Java/PHP/Python/.NET/Ruby deserialization (ysoserial, phpggc)
-- **OAuth Tester** — OAuth flow vulns (redirect_uri, state, PKCE, scope)
-- **SAML Tester** — XSW1-XSW8, signature wrapping, NameID injection
-- **Prototype Pollution Hunter** — Server-side + client-side prototype pollution
-- **CSRF Hunter** — Token validation, SameSite, content-type bypass
+---
+
+### Bug Bounty (47 agents)
+
+<details>
+<summary><b>Pro Toolkit (19)</b> — The core bug bounty arsenal</summary>
+
+- **Subdomain Takeover** — Subjack, Subzy, nuclei templates
+- **JS Analyzer** — LinkFinder, SecretFinder, JSluice
+- **XSS Hunter** — dalfox, XSStrike, blind XSS callbacks
+- **SQLi Hunter** — sqlmap, ghauri, NoSQL, WAF bypass
+- **SSRF Hunter** — interactsh, cloud metadata
+- **IDOR Hunter** — Parameter tampering, ID enumeration
+- **GraphQL Hunter** — Introspection, batching, depth attacks
+- **JWT Hunter** — jwt_tool, alg none, key confusion
+- **CORS Tester** — CORStest, Corsy
+- **Request Smuggler** — CL.TE, TE.CL, h2c
+- **Race Hunter** — Single-packet attacks
+- **Cache Poisoner** — Param Miner methodology
+- **Param Finder** — Arjun, ParamSpider, x8
+- **GitHub Recon** — trufflehog, gitleaks
+- **Cloud Recon** — S3, IAM, GCP, Azure misconfigs
+- **Collaborator** — interactsh-server
+- **Nuclei Master** — Template management
+- **Screenshot Hunter** — gowitness, aquatone
+- **Payload Crafter** — Custom payloads, shellcode
 </details>
 
 <details>
-<summary><b>🌐 CMS & Framework Hunters (5 agents)</b></summary>
+<summary><b>Advanced Vuln Classes (8)</b> — XXE, SSTI, LFI, deser, OAuth, SAML, prototype pollution, CSRF</summary>
 
-- **WordPress Hunter** — Full wpscan integration, plugin/theme CVEs, xmlrpc abuse
-- **Drupal Hunter** — Drupalgeddon, droopescan, version fingerprinting
-- **Magento Hunter** — Trojan Order, Cosmic Sting, Shoplift, Magecart detection
-- **Laravel Hunter** — .env exposure, Ignition RCE (CVE-2021-3129), APP_KEY abuse
-- **Django Hunter** — DEBUG=True, SECRET_KEY → RCE, admin enum, DRF testing
+- **XXE Hunter** — XML External Entity (file read, blind, OOB)
+- **SSTI Hunter** — Jinja, Twig, Velocity, Freemarker
+- **LFI Hunter** — File inclusion + log poisoning
+- **Deserialization Hunter** — Java/PHP/Python/.NET
+- **OAuth Tester** — redirect_uri, state, PKCE, scope
+- **SAML Tester** — XSW1-XSW8, signature wrapping
+- **Prototype Pollution Hunter** — Server + client side
+- **CSRF Hunter** — Token validation, SameSite bypass
 </details>
 
 <details>
-<summary><b>🏢 Active Directory (4 agents)</b></summary>
+<summary><b>CMS & Framework Hunters (5)</b> — WordPress, Drupal, Magento, Laravel, Django</summary>
 
-> ⚠️ For authorized AD pentests only.
-
-- **AD Attacker** — Full AD attack chain: BloodHound, Kerberoasting, AS-REP, ACL abuse, DCSync
-- **SMB Tester** — Enum, EternalBlue, SMBGhost, PrintNightmare, ntlmrelayx
-- **Kerberos Attacker** — Golden/Silver tickets, S4U2Self/Proxy, RBCD, delegation abuse
-- **LDAP Tester** — Anonymous bind, AD enum, LDAP injection, RID brute
+- **WordPress Hunter** — wpscan, plugin CVEs, xmlrpc
+- **Drupal Hunter** — Drupalgeddon, droopescan
+- **Magento Hunter** — Trojan Order, Cosmic Sting, Magecart
+- **Laravel Hunter** — .env, Ignition RCE, APP_KEY
+- **Django Hunter** — DEBUG=True, SECRET_KEY RCE
 </details>
 
 <details>
-<summary><b>☁️ Cloud Native (3 agents)</b></summary>
+<summary><b>Platform Specialists (6)</b> — Shopify, M365, Okta, ATO, e-commerce, JS extraction</summary>
 
-- **AWS Tester** — Pacu, ScoutSuite, Prowler, IAM enum, S3, IMDSv1/v2, AssumeRole
-- **Kubernetes Tester** — kube-hunter, RBAC, pod escape, kubelet abuse, etcd
-- **Container Escape** — Docker socket, CAP_SYS_ADMIN, runc CVEs, cgroups, LKM
+- **Shopify Hunter** — Theme XSS, OAuth, checkout bypass
+- **M365 Attacker** — Azure AD, password spray, FOCI
+- **Okta Tester** — SSO fingerprinting, MFA bypass
+- **Account Takeover Hunter** — Password reset, OTP bypass, OAuth hijack, 2FA bypass
+- **E-Commerce Hunter** — Price manipulation, payment bypass, coupon abuse
+- **JS Endpoint Extractor** — Extract hidden APIs from compiled JS bundles in SPAs
 </details>
 
 <details>
-<summary><b>📱 Mobile / IoT / Hardware (4 agents)</b></summary>
+<summary><b>Web Vuln Specialists (4)</b> — WebSocket, postMessage, webhooks, CSP</summary>
 
-- **Android Tester** — apktool, jadx, frida, drozer, MobSF, SSL pinning bypass
-- **iOS Tester** — frida-ios-dump, class-dump, objection, keychain dumping
-- **Firmware Extractor** — binwalk, unblob, jefferson, FAT, EMBA, secret hunting
-- **Bluetooth Tester** — BLE scanning, GATT, btlejack hijacking, gattacker MITM
+- **WebSocket Tester** — Auth bypass, CSWSH, message injection
+- **postMessage Abuser** — Origin validation flaws, eval sinks
+- **Stripe Webhook Tester** — Payment signature validation
+- **CSP Analyzer** — unsafe-inline, wildcard, JSONP bypass
 </details>
 
 <details>
-<summary><b>📊 Bug Bounty Workflow (4 agents)</b></summary>
+<summary><b>Workflow (5)</b> — Tracking, monitoring, dedup, recon orchestration, report writing</summary>
 
-- **Vuln Tracker** — SQLite finding tracker with payouts, CVSS, status, export
-- **Program Monitor** — Watch H1/Bugcrowd/Intigriti/YesWeHack for scope changes
-- **Dupe Checker** — Pre-report duplicate screening across hacktivity feeds
-- **Recon Orchestrator** — Master pipeline: subfinder→httpx→nuclei→screenshots
+- **Vuln Tracker** — SQLite finding tracker with payouts
+- **Program Monitor** — Watch platforms for scope changes
+- **Dupe Checker** — Pre-report duplicate screening
+- **Recon Orchestrator** — Master recon pipeline
+- **Bounty Report Writer** — Auto-format for H1/Bugcrowd templates
+</details>
+
+---
+
+### Extractor Suite (8 agents)
+
+> **Born from real hunting.** When standard scanning hits a wall, extractors crack open what's hidden.
+
+<details>
+<summary><b>Extractors (8)</b> — The tools that find what scanning can't</summary>
+
+- **JS Endpoint Extractor** — Download compiled JS bundles from SPAs, extract every API endpoint, secret, internal domain. **This agent cracked open OPPO's Nuxt.js app to reveal 66 hidden API endpoints and an unauthenticated admin config center.**
+- **Source Map Extractor** — Find .js.map files, reconstruct original unminified source code
+- **APK Extractor** — Decompile Android APKs with jadx, extract API keys, Firebase URLs, endpoints
+- **Config Extractor** — Hunt for .env, config.js, application.yml, phpinfo, debug endpoints
+- **Swagger Extractor** — Find hidden Swagger/OpenAPI/GraphQL docs even behind WAFs
+- **Error Extractor** — Trigger errors to harvest stack traces, internal paths, DB versions
+- **Git Extractor** — Exploit exposed .git directories, reconstruct repos, find secrets in history
+- **Metadata Extractor** — EXIF, PDF, Office metadata: usernames, GPS, internal paths
+</details>
+
+---
+
+### WAF Warfare (11 agents)
+
+> **The first comprehensive WAF bypass toolkit in any AI agent system.** Every major WAF gets its own specialist.
+
+<details>
+<summary><b>WAF Warfare (11)</b> — Break through any Web Application Firewall</summary>
+
+| Agent | Target | What It Does |
+|---|---|---|
+| **WAF Fingerprinter** | Any | Identifies which WAF + outputs known bypass techniques |
+| **WAF Bypass Scanner** | Any | General bypass: method switching, encoding, path confusion |
+| **Cloudflare Bypass** | Cloudflare | Origin IP discovery, challenge bypass, Unicode normalization |
+| **Akamai Bypass** | Akamai/Kona | Bot Manager evasion, sensor data, client reputation |
+| **AWS WAF Bypass** | AWS WAF/Shield | Managed rule evasion, body limit overflow, rate-based bypass |
+| **ModSecurity Bypass** | ModSecurity/CRS | Paranoia level detection, anomaly scoring, rule ID evasion |
+| **Imperva Bypass** | Imperva/Incapsula | Client classification, cookie analysis, smuggling |
+| **Custom WAF Bypass** | Unknown WAFs | 8-step methodology to reverse-engineer any WAF's rules |
+| **Payload Encoder** | Any | 15+ encoding types: Unicode, hex, double-encode, chunked, SQL comments |
+| **Rule Analyzer** | Any | Binary search probing to map exactly what triggers the WAF |
+| **Protocol Bypass** | Any | HTTP/2, h2c smuggling, WebSocket upgrade, QUIC, chunked abuse |
+</details>
+
+---
+
+### Hunter Suite (8 agents)
+
+> Specialized hunters for specific attack patterns.
+
+<details>
+<summary><b>Hunters (8)</b> — Each one hunts a specific vulnerability class</summary>
+
+- **Token Analyzer** — JWT cracking (alg:none, RS256→HS256, weak secrets), session entropy, cookie flags
+- **CORS Chain Analyzer** — Automated 7-origin CORS test matrix with auto-PoC generation. **The pattern that found CORS bugs on two major platforms.**
+- **Password Reset Tester** — Host header injection, token prediction, email pollution, IDOR
+- **SSO Analyzer** — Map SSO domain scope, test cross-domain session attacks
+- **API Parameter Bruter** — Brute force hidden API parameter names from error messages
+- **CDN Bypass** — Find origin IP behind Cloudflare/Akamai via DNS history, certs, email headers
+- **Rate Limit Tester** — Test rate limits on login, OTP, reset, with bypass techniques
+- **Bounty Report Writer** — Auto-format findings into H1/Bugcrowd templates with CVSS
+</details>
+
+---
+
+### Offensive Tooling (6 agents)
+
+> The tools that fill the gaps between scanning and exploitation.
+
+<details>
+<summary><b>Offensive Tools (6)</b> — Browser automation, auth breaking, response diffing, blind testing, proxy rotation, template building</summary>
+
+- **Headless Browser** — Playwright SPA renderer, intercepts all API calls at runtime, verifies XSS in real browser, tests CORS PoCs
+- **Auth Flow Breaker** — Handles RSA-encrypted login, multi-step auth, CAPTCHA detection, OAuth automation
+- **Response Differ** — JSON-aware response comparison for IDOR detection, highlights meaningful differences
+- **Blind Injection Tester** — OOB testing with interactsh for blind XSS/SSRF/SQLi/XXE
+- **Proxy Rotator** — IP rotation via Tor, free proxies, Lambda, header spoofing
+- **Nuclei Template Builder** — Convert any finding into a nuclei template for mass scanning
+</details>
+
+---
+
+### Recon & Utility (5 agents)
+
+<details>
+<summary><b>Recon (5)</b> — Subdomain brute-force, tech detection, cookie audit, redirect tracing, bucket finding</summary>
+
+- **Subdomain Bruteforcer** — Active DNS brute-force + permutations + vhost discovery
+- **Tech Stack Detector** — Wappalyzer-style fingerprinting from headers, JS, HTML, cookies
+- **Cookie Security Auditor** — Audit all cookies for Secure/HttpOnly/SameSite/domain scope
+- **Redirect Chain Tracer** — Follow every redirect, test for open redirect at each hop
+- **S3 Bucket Finder** — Enumerate S3/GCS/Azure buckets from domain names
+</details>
+
+---
+
+### Specialized (22 agents)
+
+<details>
+<summary><b>Active Directory (4)</b> — BloodHound, Kerberoasting, LDAP, SMB</summary>
+
+- **AD Attacker** — Full AD chain: BloodHound, Kerberoasting, DCSync
+- **SMB Tester** — EternalBlue, SMBGhost, ntlmrelayx
+- **Kerberos Attacker** — Golden/Silver tickets, S4U2, RBCD
+- **LDAP Tester** — Anonymous bind, LDAP injection, RID brute
 </details>
 
 <details>
-<summary><b>🤖 AI/ML Security (3 agents)</b></summary>
+<summary><b>Cloud Native (3)</b> — AWS, Kubernetes, container escape</summary>
 
-> Emerging field — test LLM apps and ML models for security flaws.
-
-- **Prompt Injection Tester** — Direct/indirect injection, system prompt extraction
-- **Model Extractor** — Find exposed model files, shadow model extraction, MIA
-- **AI Jailbreaker** — DAN, role-play, encoding, multi-step, garak, PAIR, GCG
+- **AWS Tester** — Pacu, IAM, S3, IMDSv2, AssumeRole
+- **Kubernetes Tester** — kube-hunter, RBAC, pod escape
+- **Container Escape** — Docker socket, runc CVEs, cgroups
 </details>
 
 <details>
-<summary><b>🛰️ Recon & Bypass (4 agents)</b></summary>
+<summary><b>Mobile / IoT (4)</b> — Android, iOS, firmware, Bluetooth</summary>
 
-> Born at 1 AM on 2026-04-12 from Bassx's "this would be sick if it existed" list.
-
-- **WAF Fingerprinter** — Identifies which WAF is in front (Cloudflare/Akamai/AWS WAF/Imperva/F5/Sucuri/ModSec/Wordfence/Barracuda/FortiWeb/etc.) and outputs known bypass techniques specific to that WAF
-- **Origin Finder** — Finds the real IP behind Cloudflare/Akamai via 10 techniques: cert SAN search, historical DNS, MX records, SPF walker, favicon hash, WordPress XML-RPC pingback, SSRF, leaky CDN headers, origin subdomain patterns, subfinder pivot
-- **Shodan Pivoter** — Pivots through Shodan/Censys/ZoomEye/BinaryEdge to find related infrastructure via SSL hash, favicon hash, JARM, HTTP title
-- **HTTP/2 Smuggler** — HTTP/2-specific smuggling: h2c upgrade, downgrade desync (H2.CL, H2.TE), frame smuggling, pseudo-header attacks
+- **Android Tester** — apktool, jadx, frida, drozer, MobSF
+- **iOS Tester** — frida-ios-dump, objection, keychain
+- **Firmware Extractor** — binwalk, unblob, firmware analysis
+- **Bluetooth Tester** — BLE, GATT, btlejack, gattacker
 </details>
 
 <details>
-<summary><b>🕸️ Web Vuln Class Specialists (4 agents)</b></summary>
+<summary><b>AI/ML Security (3)</b> — Prompt injection, model extraction, jailbreaking</summary>
 
-- **WebSocket Tester** — WebSocket auth bypass, CSWSH, message injection, IDOR via WS, subprotocol attacks
-- **postMessage Abuser** — Find + exploit `window.postMessage()` handlers in SPAs (origin validation flaws, eval sinks, OAuth token theft)
-- **Stripe Webhook Tester** — Tests payment webhook signature validation for Stripe, GitHub, Slack, Shopify, Twilio, Square, PayPal IPN
-- **CSP Analyzer** — Scores Content-Security-Policy headers, finds `unsafe-inline` / wildcard / JSONP bypass weaknesses, references known bypass hosts
+- **Prompt Injection Tester** — Direct/indirect injection
+- **Model Extractor** — Exposed models, shadow extraction
+- **AI Jailbreaker** — DAN, garak, PAIR, GCG
 </details>
 
 <details>
-<summary><b>🏪 Platform Specialists (6 agents)</b></summary>
+<summary><b>Recon & Bypass (4)</b> — WAF fingerprint, origin find, Shodan pivot, H2 smuggle</summary>
 
-- **Shopify Hunter** — Theme XSS, Liquid SSTI, OAuth scope abuse, checkout flow bypass, customer ATO via password reset poisoning, storefront GraphQL abuse
-- **M365 Attacker** — Microsoft 365 / Azure AD: tenant enum via openid-configuration, MSOLSpray/o365spray password spray, FOCI client pivot, illicit consent grant, ROADtools
-- **Okta Tester** — Okta SSO: tenant fingerprinting, open enrollment, SAML XSW1-XSW8, MFA push-bombing, API token hunting
-- **Account Takeover Hunter** — Full ATO specialist: password reset poisoning, OTP bypass, OAuth flow hijack, session fixation, 2FA bypass, host header injection, mass assignment on user endpoints
-- **E-Commerce Hunter** — Price manipulation, payment bypass, coupon abuse, cart tampering, currency confusion, race conditions on checkout, IDOR on orders/addresses/invoices
-- **JS Endpoint Extractor** — Extracts hidden API endpoints, secrets, tokens, and internal domains from compiled JavaScript bundles in SPAs. Cracks open Nuxt/Next/React/Vue apps that hide their API surface behind compiled JS
+- **WAF Fingerprinter** — Identifies which WAF + bypass techniques
+- **Origin Finder** — Real IP behind CDN via 10 techniques
+- **Shodan Pivoter** — Pivot through Shodan/Censys/ZoomEye
+- **HTTP/2 Smuggler** — h2c upgrade, downgrade desync
 </details>
 
 <details>
-<summary><b>🛡️ Defense & Workflow (4 agents)</b></summary>
+<summary><b>Defense & Workflow (4)</b> — GTFOBins, LOLBAS, drift detection, payout prediction</summary>
 
-- **GTFOBins Lookup** — Offline GTFOBins reference + auto-scanner for SUID/sudo/capabilities. `claudeos gtfobins scan-all` returns every privesc path on the box
-- **LOLBAS Finder** — Linux Living-Off-The-Land binaries database + payload generator. Defender mode generates auditd rules; offensive mode emits paste-ready payloads
-- **Drift Detector** — Snapshots system state (cron, services, SUID, ports, packages, /etc, kernel modules) and alerts on drift via webhook/Telegram/email
-- **Bug Payout Predictor** — SQLite-backed predictor that ingests HackerOne hacktivity + Bugcrowd disclosures, predicts likely payout for a vuln type before you spend hours writing the report
+- **GTFOBins Lookup** — SUID/sudo/caps scanner
+- **LOLBAS Finder** — Living-Off-The-Land + payload generator
+- **Drift Detector** — System state snapshots + drift alerts
+- **Bug Payout Predictor** — Predict bounty payouts from hacktivity
 </details>
 
-## ⚡ Pro Features (v2.0)
+---
 
-ClaudeOS v2 adds 10 new pro features that make managing 300 agents actually pleasant:
+## Pro Features
 
-| Command | What it does |
+| Command | What It Does |
 |---|---|
-| `claudeos wizard` | First-run setup wizard — picks profile, mode, notifications in 60 seconds |
-| `claudeos agents` | Browse, search, and read all 300 agents by category |
-| `claudeos workflow` | Run pre-built multi-agent workflows (`bug-bounty`, `recon`, `wordpress`, etc.) |
-| `claudeos engagement` | Manage bug bounty/pentest workspaces with auto-organized output |
-| `claudeos findings` | SQLite-backed findings tracker with CVSS, status, payouts |
-| `claudeos undo` | Roll back changes made by agents (config files, etc.) |
-| `claudeos diff` | Compare scan results to find what changed |
-| `claudeos screenshot` | Auto-screenshot URLs for PoCs (gowitness/aquatone/chromium) |
-| `claudeos cheatsheet` | Generate one-page reference cards for any agent |
-| `claudeos telegram` | Send alerts and receive commands via Telegram bot |
+| `claudeos wizard` | First-run setup wizard |
+| `claudeos agents` | Browse and search all 300 agents by category |
+| `claudeos workflow` | Pre-built multi-agent workflows (bug-bounty, recon, wordpress, etc.) |
+| `claudeos engagement` | Manage bug bounty/pentest workspaces |
+| `claudeos findings` | SQLite findings tracker with CVSS and payouts |
+| `claudeos quickscan` | Full recon pipeline in 30 seconds (DNS, subdomains, headers, CORS, APIs) |
+| `claudeos undo` | Roll back agent changes |
+| `claudeos diff` | Compare scan results |
+| `claudeos screenshot` | Auto-screenshot URLs for PoCs |
+| `claudeos cheatsheet` | One-page reference cards for any agent |
+| `claudeos telegram` | Telegram bot: control ClaudeOS from your phone |
 
-### Pro Workflow Example
+### Self-Improving Engine
 
-```bash
-# Start a new bug bounty engagement
-claudeos engagement start hackerone-tesla
+ClaudeOS gets smarter over time. When an agent's command fails:
 
-# Run the full bug bounty workflow against a target
-claudeos workflow bug-bounty tesla.com
+1. **Detects** the failure (exit code, stderr)
+2. **Classifies** it (missing tool, syntax error, OS mismatch, false positive)
+3. **Fixes** the agent's CLAUDE.md playbook
+4. **Retries** the command
+5. **Commits** the fix: `auto-fix(agent): what was fixed`
 
-# Track findings as you discover them
-claudeos findings add
+Every failure makes the system stronger. See `agents/self-improver/CLAUDE.md` for the full protocol.
 
-# See your stats and earnings
-claudeos findings stats
+---
 
-# Get notified on Telegram when scans complete
-claudeos telegram alert success "Recon complete for tesla.com"
+## Safety & Authorization
 
-# Compare today's recon with yesterday's
-claudeos diff engagement hackerone-tesla
+ClaudeOS is built for **defenders, learners, and ethical hackers.**
+
+### One-Time Confirmation (Default)
+
+The first time you use an offensive agent, ClaudeOS asks once:
+
+```
+> Are you authorized to test [target]?
+> 1) bug-bounty   2) ctf   3) own   4) client   5) research   no) cancel
 ```
 
-## Autonomous Features
+No forms. No PDFs. No lawyers. You're a professional — ClaudeOS trusts you.
 
-ClaudeOS runs in the background and takes care of your server:
+### What ClaudeOS Always Does
 
-| Feature | Interval | What It Does |
-|---------|----------|-------------|
-| Health Monitor | Every 5 min | Checks CPU/RAM/disk, restarts crashed services |
-| Security Watchdog | Every 15 min | Detects brute force, bans attacking IPs |
-| Auto Backup | Daily 2 AM | Full backup with 30-day rotation |
-| Daily Report | Daily 7 AM | Summary report of everything that happened |
-| Auto Optimize | Weekly | Tunes MySQL, Nginx, PHP-FPM for your hardware |
-| Self Update | Weekly | Updates Claude Code CLI and security patches |
+- Logs every action to `/var/log/claudeos/actions.log`
+- Confirms destructive operations before executing
+- Refuses to attack targets you didn't authorize
+
+### What ClaudeOS Will NOT Do
+
+- Run offensive agents without your confirmation
+- Help with malware distribution or unauthorized access
+- Hide its actions from logs
+- Pretend you have authorization when you don't
+
+### Pro Mode (Optional)
+
+For paid pentest engagements with legal requirements, enable Pro Mode for per-engagement scope files and audit trails. See [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
 
 ## CLI Commands
 
 ```bash
 claudeos              # Open AI assistant
 claudeos status       # System health dashboard
-claudeos dashboard    # Full system overview
-claudeos health       # Run health check
-claudeos security     # Security audit
-claudeos backup       # Run backup now
-claudeos backup list  # Show backups
-claudeos update       # Update packages
-claudeos report       # Today's report
-claudeos logs         # Recent events
-claudeos services     # Running services
-claudeos firewall     # Firewall rules
-claudeos users        # System users
-claudeos disk         # Disk usage
-claudeos alerts       # Recent warnings
+claudeos agents       # Browse all 300 agents
+claudeos quickscan    # Full recon pipeline
+claudeos workflow     # Multi-agent workflows
+claudeos engagement   # Manage workspaces
+claudeos findings     # Track vulnerabilities
+claudeos telegram     # Telegram bot control
 claudeos help         # Show all commands
 ```
 
-## Requirements
-
-- **OS**: Ubuntu 22.04+ or Debian 12+
-- **RAM**: 512MB (Server), 1GB (Dashboard), 2GB (Desktop)
-- **CPU**: 1+ cores
-- **Disk**: 5GB+ free
-- **Node.js**: 20+ (auto-installed)
-- **Claude API key** (get at [claude.ai](https://claude.ai))
+---
 
 ## Contributing
 
-Contributions welcome! Feel free to:
-- Add new agents
-- Improve existing agents
+We welcome contributions:
+- Add new agents (just create `agents/{name}/CLAUDE.md`)
+- Improve existing agent playbooks
 - Add support for more Linux distros
-- Improve the web dashboard
-- Report bugs
+- Report bugs or suggest features
+- Share your real-world stories
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
 
 ## License
 
@@ -750,8 +729,10 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
+**300 agents. Battle-tested. Self-improving. Open source.**
 
+**Built by hunters, for hunters.**
 
-[Report Bug](https://github.com/MuLTiAcidi/claudeos/issues) · [Request Feature](https://github.com/MuLTiAcidi/claudeos/issues)
+[Report Bug](https://github.com/MuLTiAcidi/claudeos/issues) | [Request Feature](https://github.com/MuLTiAcidi/claudeos/issues) | [Join the Community](https://github.com/MuLTiAcidi/claudeos/discussions)
 
 </div>

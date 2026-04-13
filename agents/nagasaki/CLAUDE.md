@@ -22,28 +22,114 @@ claudeos nagasaki hunt <target>       # Phase 4-5: identify + strike
 claudeos nagasaki report <target>     # Generate report from findings
 ```
 
-## Phase 1: SILENCE — Prepare the Ghost
+## Phase 1: SILENCE — Become the Ghost
 
-Before touching the target, become invisible.
+Before touching the target, Nagasaki becomes invisible. This isn't a feature you enable — this is Nagasaki's NATURE. The original Nagasaki (2014) was completely undetected because stealth was its blood, not its clothes.
 
 ```
-AGENTS DEPLOYED: stealth-core
+NAGASAKI GHOST ENGINE (built-in, always active):
 
-Actions:
-1. Load stealth profile (Ghost Mode)
-2. Configure all requests with browser-realistic headers
-3. Set human-speed timing (1-3 sec between requests)
-4. Rotate User-Agent pool
-5. If hunter-base is available, route through proxy VPS
-6. Add bug bounty identification header if program requires it
+1. IDENTITY ROTATION
+   - Auto-fetch fresh proxy IPs from multiple sources
+   - Rotate IP per request or per session (configurable)
+   - Sources: free-proxy-list, proxy-scrape, Tor circuits, 
+     SOCKS providers, cloud function endpoints
+   - Validate each IP before use (speed, anonymity level)
+   - If IP gets flagged → instant rotation, no delay
+
+2. FINGERPRINT SPOOFING
+   - Browser fingerprint: randomized but CONSISTENT per session
+     (canvas, WebGL, fonts, screen, timezone all match)
+   - TLS fingerprint: JA3/JA4 matching real Chrome/Firefox
+   - HTTP headers: full browser-realistic set, rotated per session
+   - Cookie handling: maintain cookies per session like a real browser
+   - TCP fingerprint: OS-matching TCP window size, TTL
+
+3. BEHAVIOR SIMULATION
+   - Human-speed timing with random jitter (1-3 sec)
+   - Realistic browsing pattern: homepage → navigate → read → click
+   - Scroll simulation in headless browser
+   - Mouse movement patterns (Bezier curves, not linear)
+   - Occasional "mistakes" — visit wrong page, go back
+
+4. STEALTH VERIFICATION (before proceeding to Phase 2)
+   - [ ] IP is clean (not on blocklists)
+   - [ ] TLS fingerprint matches claimed browser
+   - [ ] All headers are browser-realistic
+   - [ ] No tool signatures in any layer
+   - [ ] Rate limits configured per program rules
+   - [ ] Bug bounty header added if required
 ```
 
-**Stealth check before proceeding:**
-- [ ] User-Agent is realistic browser string
-- [ ] Accept-Language present
-- [ ] Request timing is randomized
-- [ ] No tool fingerprints in any header
-- [ ] Rate limits configured per program rules
+```python
+# Nagasaki Ghost Engine — auto-rotating proxy fetcher
+import random, time, urllib.request, re
+
+class GhostEngine:
+    """Nagasaki's built-in invisibility system.
+    Fetches fresh proxies, rotates identity, spoofs fingerprints."""
+    
+    PROXY_SOURCES = [
+        'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=elite',
+        'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
+        'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/https.txt',
+        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt',
+    ]
+    
+    def __init__(self):
+        self.proxies = []
+        self.current_proxy = None
+        self.session_ua = None
+        self.request_count = 0
+        self.blocked_proxies = set()
+    
+    def refresh_proxies(self):
+        """Fetch fresh proxy list from multiple sources."""
+        all_proxies = set()
+        for source in self.PROXY_SOURCES:
+            try:
+                req = urllib.request.Request(source, headers={'User-Agent': 'Mozilla/5.0'})
+                data = urllib.request.urlopen(req, timeout=10).read().decode()
+                for line in data.strip().split('\n'):
+                    line = line.strip()
+                    if re.match(r'\d+\.\d+\.\d+\.\d+:\d+', line):
+                        all_proxies.add(line)
+            except:
+                continue
+        self.proxies = [p for p in all_proxies if p not in self.blocked_proxies]
+        random.shuffle(self.proxies)
+    
+    def get_proxy(self):
+        """Get next clean proxy. Auto-refreshes if pool is low."""
+        if len(self.proxies) < 5:
+            self.refresh_proxies()
+        if self.proxies:
+            self.current_proxy = self.proxies.pop(0)
+            return self.current_proxy
+        return None
+    
+    def mark_blocked(self, proxy):
+        """Mark a proxy as blocked/detected."""
+        self.blocked_proxies.add(proxy)
+        self.get_proxy()  # Auto-rotate to next
+    
+    def rotate(self):
+        """Full identity rotation — new IP, new fingerprint."""
+        self.get_proxy()
+        self.session_ua = random.choice(UA_POOL)
+        self.request_count = 0
+    
+    def should_rotate(self, response_code):
+        """Auto-detect when we're burned and need to rotate."""
+        if response_code in [403, 429, 503]:
+            return True
+        self.request_count += 1
+        if self.request_count > 50:  # Rotate every 50 requests
+            return True
+        return False
+```
+
+The original Nagasaki had this built in 12 years ago — automated, self-sufficient, invisible. This version does the same with modern sources and smarter rotation.
 
 ## Phase 2: OBSERVE — Open the Eyes
 

@@ -9,9 +9,9 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### 300 AI Agents. One Command. Your Server, Your Rules.
+### Not a toolkit. A team.
 
-**The largest AI-powered agent system ever built for Linux. Server management, bug bounty hunting, offensive security, and everything in between — all through natural language.**
+**300 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agents](https://img.shields.io/badge/Agents-300-brightgreen.svg)]()
@@ -28,11 +28,15 @@
 
 ClaudeOS started because memorizing Linux commands is stupid. You shouldn't need to remember `iptables -A INPUT -p tcp --dport 443 -j ACCEPT` when you can just say *"open port 443."*
 
-Then it grew. Bug bounty hunters started using it. They said: *"What if it could also scan for vulnerabilities?"* So we built agents for that. Then pentesters wanted offensive tools. Gamers wanted Minecraft servers. DevOps wanted CI/CD pipelines.
+Then it grew. Bug bounty hunters started using it. Pentesters wanted offensive tools. Gamers wanted Minecraft servers. DevOps wanted CI/CD pipelines. Each need became a specialist agent.
 
-Today ClaudeOS has **300 specialist AI agents** covering everything from setting up nginx to cracking WAFs to managing Minecraft servers. Every agent contains real, tested bash commands — not simulations, not theory. Real tools that work on real servers.
+But agents alone weren't enough. Running one tool at a time is script kiddie energy. Real professionals don't use tools in isolation — they coordinate. The defender's findings feed the hunter. The hunter's discovery feeds the defender's patch. The extractor's intelligence feeds everyone.
 
-And it keeps getting better. ClaudeOS has a **self-improving engine** — when an agent fails, it detects why, fixes its own playbook, and commits the fix. The system literally learns from its mistakes.
+**ClaudeOS v3.0 is the result.** Not 300 tools in a box. **300 specialists working as one team.** They share intelligence. They feed each other. They observe before acting. They strike precisely.
+
+Every agent contains real, battle-tested commands — born from real bug bounty hunting on HackerOne, Bugcrowd, and YesWeHack. And the system keeps getting smarter: a **self-improving engine** detects failures, fixes agent playbooks, and commits the fix. Every failure makes the team stronger.
+
+> *"The true hunter never shows himself. He stays in the middle, hidden, watching, gathering. Then the bug reveals itself."*
 
 ---
 
@@ -729,9 +733,9 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
-**300 agents. Battle-tested. Self-improving. Open source.**
+**Not a toolkit. A team. 300 specialists. One mission.**
 
-**Built by hunters, for hunters.**
+**v3.0 — Built by hunters, for hunters.**
 
 [Report Bug](https://github.com/MuLTiAcidi/claudeos/issues) | [Request Feature](https://github.com/MuLTiAcidi/claudeos/issues) | [Join the Community](https://github.com/MuLTiAcidi/claudeos/discussions)
 

@@ -99,7 +99,7 @@ ClaudeOS has **4 simple layers**. There are no daemons, no message buses, no hid
 ┌─────────────────────────────────────────────────────────┐
 │  LAYER 2: ORCHESTRATOR  (claudeos/CLAUDE.md)            │
 │  • Reads your request                                   │
-│  • Picks the right agent(s) from 264 specialists        │
+│  • Picks the right agent(s) from 300 specialists        │
 │  • Coordinates multi-agent workflows                    │
 │  • Verifies authorization for offensive agents          │
 └────────────────────┬────────────────────────────────────┘
@@ -653,12 +653,12 @@ ClaudeOS ships with **253 specialized AI agents** across 17 categories. Every ag
 
 ## ⚡ Pro Features (v2.0)
 
-ClaudeOS v2 adds 10 new pro features that make managing 264 agents actually pleasant:
+ClaudeOS v2 adds 10 new pro features that make managing 300 agents actually pleasant:
 
 | Command | What it does |
 |---|---|
 | `claudeos wizard` | First-run setup wizard — picks profile, mode, notifications in 60 seconds |
-| `claudeos agents` | Browse, search, and read all 264 agents by category |
+| `claudeos agents` | Browse, search, and read all 300 agents by category |
 | `claudeos workflow` | Run pre-built multi-agent workflows (`bug-bounty`, `recon`, `wordpress`, etc.) |
 | `claudeos engagement` | Manage bug bounty/pentest workspaces with auto-organized output |
 | `claudeos findings` | SQLite-backed findings tracker with CVSS, status, payouts |

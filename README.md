@@ -9,7 +9,7 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### Not a toolkit. A team.
+### The Wolf Pack. 329 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
 
 **300 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 
@@ -733,9 +733,9 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
-**Not a toolkit. A team. 300 specialists. One mission.**
+**The Wolf Pack. 329 specialists. Every wolf has a role. No wolf sits idle.**
 
-**v3.0 — Built by hunters, for hunters.**
+**v3.1 — Built by hunters, for hunters.**
 
 [Report Bug](https://github.com/MuLTiAcidi/claudeos/issues) | [Request Feature](https://github.com/MuLTiAcidi/claudeos/issues) | [Join the Community](https://github.com/MuLTiAcidi/claudeos/discussions)
 

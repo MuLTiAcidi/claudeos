@@ -9,7 +9,7 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### The Wolf Pack. 331 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
+### The Wolf Pack. 336 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
 
 **300 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 

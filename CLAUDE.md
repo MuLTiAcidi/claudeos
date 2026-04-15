@@ -85,6 +85,67 @@ When given ANY target, deploy wolves across ALL 6 layers:
 - Nuclei Template Builder (turn findings into reusable templates)
 - Response Differ (compare responses for subtle differences)
 
+## Battle-Tested Hunt Process
+
+**Learned from 5 nights of real bug bounty hunting. This is the CORRECT order. Follow it EVERY time.**
+
+### Phase 0: BOUNTY INTEL (before touching ANYTHING)
+```
+claudeos bounty-intel scan <program>
+```
+- Check resolved report count (high = stale, low = fresh)
+- Read ALL disclosed reports in hacktivity
+- Calculate duplicate risk
+- IF freshness < 3 → SKIP the program, find another
+- NEVER hunt without checking intel first (4/6 reports were duplicates when we skipped this)
+
+### Phase 1: ONE Ghost Request (see what we're dealing with)
+```
+ONE request to main domain. Ghost mode. Human fingerprint.
+```
+- If Cloudflare challenge → STOP → don't scan → ask operator for cookies or move on
+- NEVER scan 80+ paths on a blocked domain (we got IP banned on 23andMe doing this)
+- Check: server, framework, security headers, cookies, CORS
+
+### Phase 2: JS EXTRACTION IMMEDIATELY (the skeleton key)
+```
+THIS IS THE #1 PRIORITY. The answers are in the code.
+```
+- Extract ALL JavaScript bundles from admin panels, SPAs, main pages
+- Search for: client_id, API base URLs, endpoints, secrets, role names, permissions
+- On Bumba: admin JS had `exchange-web` client_id, REST endpoints, role names → led to live prices
+- On OPPO: JS had `/cn/oapi/` API base → led to Fuxi config center
+- On Banco Plata: JS had `env.json` preload → led to full infrastructure exposure
+- **The JS tells you WHICH door, WHICH key, WHICH lock. Read it FIRST.**
+
+### Phase 3: Follow the Lead Chain (don't scatter)
+```
+Each finding points to the next. Follow ONE chain to the end.
+```
+- Keycloak found → register → extract admin JS → find client_id → get token → test APIs → get data
+- DON'T jump between 10 different angles. Follow the CHAIN.
+- Switch angles ONLY when a chain is exhausted
+- The chain always leads somewhere: access → data → impact
+
+### Phase 4: Full Pack Deployment (all 6 layers)
+```
+Deploy scouts, infiltrators, analysts, infrastructure, strikers, support.
+From the START. Not gradually. Every wolf has a job.
+```
+- VPS runs: subfinder, nuclei, port scans, headless browser, APK decompilation
+- Mac runs: JS extraction, API probing, GraphQL discovery, token analysis
+- Both in parallel
+
+### Phase 5: Report When DATA Speaks
+```
+Don't report access. Report DATA.
+```
+- "I found a login page" → Informative (no bounty)
+- "I found an API endpoint" → Low (maybe bounty)
+- "I got live BTC prices through an auth bypass" → Critical (bounty)
+- Keep pushing until you have REAL data that demonstrates REAL impact
+- Think like the reviewer: "Would I pay for this?"
+
 ## How the Team Works
 
 Each specialist is a playbook at `agents/{name}/CLAUDE.md`. But they don't work alone:
@@ -97,21 +158,26 @@ Each specialist is a playbook at `agents/{name}/CLAUDE.md`. But they don't work 
 **Team mode** — Complex tasks coordinate multiple specialists:
 ```
 "hunt for bugs on target.com" →
-  Extractor pulls JS bundles, finds hidden APIs
+  Bounty Intel checks for duplicates FIRST
+  JS Extractor pulls bundles, finds hidden APIs and client IDs
   Tech Stack Detector identifies the framework
-  CORS Chain Analyzer tests every endpoint
-  Hunter identifies the vulnerability
-  Report Writer documents the finding
-  — all feeding each other's discoveries
+  Token Analyzer tests discovered auth tokens
+  GraphQL Hunter probes for schema leaks
+  Strikers test only what intel revealed
+  Report Writer documents with proof
+  — each wolf feeds the next
 ```
 
 **Full engagement mode** — Everything deploys together:
 ```
 "engage target.com" →
-  WHITE HAT maps security posture
-  EXTRACTORS pull hidden APIs, configs, source maps
-  GREY HAT researches the tech stack
-  HUNTER watches for patterns, identifies vulns
+  BOUNTY INTEL clears the target (no duplicates)
+  SCOUTS map the surface (subdomains, tech, WAF)
+  INFILTRATORS extract JS and find the keys (client IDs, APIs)
+  ANALYSTS study the defenses (WAF rules, auth flow)
+  INFRASTRUCTURE checks all ports and routes
+  STRIKERS follow the lead chain to DATA
+  SUPPORT documents everything with proof
   BLACK HAT confirms exploitation
   DEFENDER documents what protection was missing
   INTEL correlates with community knowledge

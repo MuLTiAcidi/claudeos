@@ -9,7 +9,7 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### The Wolf Pack. 329 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
+### The Wolf Pack. 331 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
 
 **300 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 
@@ -637,7 +637,7 @@ The largest agent collection ever built for a Linux system. Every agent contains
 | Command | What It Does |
 |---|---|
 | `claudeos wizard` | First-run setup wizard |
-| `claudeos agents` | Browse and search all 300 agents by category |
+| `claudeos agents` | Browse and search all 331 agents by category |
 | `claudeos workflow` | Pre-built multi-agent workflows (bug-bounty, recon, wordpress, etc.) |
 | `claudeos engagement` | Manage bug bounty/pentest workspaces |
 | `claudeos findings` | SQLite findings tracker with CVSS and payouts |
@@ -701,7 +701,7 @@ For paid pentest engagements with legal requirements, enable Pro Mode for per-en
 ```bash
 claudeos              # Open AI assistant
 claudeos status       # System health dashboard
-claudeos agents       # Browse all 300 agents
+claudeos agents       # Browse all 331 agents
 claudeos quickscan    # Full recon pipeline
 claudeos workflow     # Multi-agent workflows
 claudeos engagement   # Manage workspaces
@@ -733,7 +733,7 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
-**The Wolf Pack. 329 specialists. Every wolf has a role. No wolf sits idle.**
+**The Wolf Pack. 331 specialists. Every wolf has a role. No wolf sits idle.**
 
 **v3.1 — Built by hunters, for hunters.**
 

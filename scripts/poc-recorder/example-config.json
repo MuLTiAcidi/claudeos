@@ -1,0 +1,14 @@
+{
+    "target": "https://nofert.net",
+    "evidence_dir": "/opt/claudeos-hunt/evidence/nofert-test",
+    "steps": [
+        { "action": "goto", "url": "/", "name": "homepage", "wait": 3000 },
+        { "action": "screenshot", "name": "homepage-loaded" },
+        { "action": "console", "code": "return { url: window.location.href, title: document.title, cookies: document.cookie.length }", "name": "page-info", "wait": 1000 },
+        { "action": "devtools" },
+        { "action": "screenshot", "name": "with-console-output" },
+        { "action": "console", "code": "var r = await fetch('/'); var t = await r.text(); console.log('Page size: ' + t.length + ' bytes'); console.log('Status: ' + r.status); return { size: t.length, status: r.status }", "name": "fetch-test", "wait": 1000 },
+        { "action": "devtools" },
+        { "action": "screenshot", "name": "after-fetch-test" }
+    ]
+}

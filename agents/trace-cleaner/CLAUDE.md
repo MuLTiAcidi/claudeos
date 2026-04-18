@@ -402,3 +402,243 @@ history | wc -l
 1. `sudo systemctl mask rsyslog`
 2. `sudo systemctl mask systemd-journald` (extreme — breaks tooling)
 3. Reverse: `systemctl unmask`
+
+---
+
+## 2026 Trace Cleaning
+
+### Container-Aware Log Cleaning (Docker & Kubernetes)
+
+```bash
+# Docker container logs — stored as JSON by default
+# Find all container log files
+sudo find /var/lib/docker/containers/ -name "*-json.log" -ls
+
+# Truncate a specific container's logs
+CONTAINER_ID=$(docker inspect --format='{{.Id}}' target_container)
+sudo truncate -s 0 /var/lib/docker/containers/${CONTAINER_ID}/${CONTAINER_ID}-json.log
+
+# Remove specific entries from container logs (grep -v pattern)
+sudo cp /var/lib/docker/containers/${CONTAINER_ID}/${CONTAINER_ID}-json.log /tmp/docker.work
+sudo grep -v "$TARGET_IP" /tmp/docker.work | sudo tee /var/lib/docker/containers/${CONTAINER_ID}/${CONTAINER_ID}-json.log >/dev/null
+sudo shred -uvz /tmp/docker.work
+
+# Docker daemon logs (systemd)
+sudo journalctl -u docker --vacuum-time=1s
+
+# Kubernetes audit logs — typically at /var/log/kubernetes/audit/
+sudo find /var/log/kubernetes/ -name "*.log" -ls
+# Selective edit (same grep -v pattern as system logs)
+for log in /var/log/kubernetes/audit/*.log; do
+    sudo cp -a "$log" "${log}.work"
+    sudo grep -v "$TARGET_IP" "${log}.work" | sudo tee "$log" >/dev/null
+    sudo shred -uvz "${log}.work"
+done
+
+# Kubernetes pod logs via kubectl (for awareness — you can't clean these remotely)
+kubectl logs <pod-name> -n <namespace> --timestamps
+# Pod logs are stored on the node at /var/log/pods/<namespace>_<pod>_<uid>/
+sudo find /var/log/pods/ -name "*.log" | head -20
+
+# Clean kubelet logs
+sudo journalctl -u kubelet --vacuum-time=1s
+```
+
+### Cloud Trail Log Awareness (What You CAN'T Clean)
+
+```bash
+# ====================================================================
+# CRITICAL: These logs are OUTSIDE your control. You CANNOT delete them.
+# Know what they record so you can plan around them.
+# ====================================================================
+
+# AWS CloudTrail — records ALL API calls to AWS
+# - Stored in S3 bucket controlled by the account owner
+# - Cannot be deleted by IAM users (unless you own the trail)
+# - Records: who, what, when, from where (source IP, user agent)
+# - Even if you compromise an EC2 instance, CloudTrail still logs your API calls
+# CHECK what's being logged:
+aws cloudtrail describe-trails
+aws cloudtrail get-trail-status --name default
+aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventSource,AttributeValue=ec2.amazonaws.com --max-results 5
+
+# GCP Cloud Audit Logs — Admin Activity logs CANNOT be disabled
+# - Data Access logs CAN be disabled but usually aren't
+# - Records: gcloud, API calls, console actions
+gcloud logging read "logName:cloudaudit.googleapis.com" --limit 5 --format json
+
+# Azure Monitor / Activity Log — retained 90 days, NOT deletable
+# - Records all control plane operations
+az monitor activity-log list --offset 1h -o table
+
+# IMPLICATIONS FOR RED TEAM:
+# 1. Assume all cloud API calls are logged permanently
+# 2. Use STS temporary credentials — they expire, reducing exposure window
+# 3. Avoid using cloud CLIs from the target if possible — use the instance role
+# 4. If you must call cloud APIs, do it through the compromised instance (blends in)
+```
+
+### Systemd Journal Manipulation
+
+```bash
+# Journald stores logs in /var/log/journal/ (persistent) or /run/log/journal/ (volatile)
+
+# Check current storage mode
+cat /etc/systemd/journald.conf | grep -i storage
+# Storage=auto    → persistent if /var/log/journal/ exists, else volatile
+# Storage=volatile → RAM only (disappears on reboot)
+# Storage=persistent → always written to disk
+
+# Switch to volatile (logs disappear on reboot — lab only)
+sudo sed -i 's/^#\?Storage=.*/Storage=volatile/' /etc/systemd/journald.conf
+sudo systemctl restart systemd-journald
+# Logs are now in /run/log/journal/ (tmpfs)
+
+# Vacuum specific time windows
+sudo journalctl --rotate
+sudo journalctl --vacuum-time=2h    # keep only last 2 hours
+sudo journalctl --vacuum-size=50M   # cap total size
+
+# Delete journal files directly (when vacuum isn't surgical enough)
+sudo systemctl stop systemd-journald
+sudo find /var/log/journal/ -name "*.journal" -newer /tmp/start_marker ! -newer /tmp/end_marker -delete
+sudo systemctl start systemd-journald
+
+# Verify what remains
+journalctl --disk-usage
+journalctl --list-boots
+journalctl -u sshd --since "1 hour ago"
+```
+
+### Browser Artifact Cleaning
+
+```bash
+# Modern browsers store data beyond cookies and history.
+# These are the artifacts most forensic tools miss — but we don't.
+
+# IndexedDB (used by SPAs, PWAs — stores structured data)
+# Chrome/Chromium:
+find ~/.config/google-chrome/ -path "*/IndexedDB/*" -type f -ls
+rm -rf ~/.config/google-chrome/Default/IndexedDB/*
+# Firefox:
+find ~/.mozilla/firefox/ -path "*/storage/default/*/idb/*" -type f -ls
+rm -rf ~/.mozilla/firefox/*.default-release/storage/default/*/idb/*
+
+# Service Workers (can cache requests, responses, and run background sync)
+# Chrome:
+rm -rf ~/.config/google-chrome/Default/Service\ Worker/
+# Firefox:
+rm -rf ~/.mozilla/firefox/*.default-release/serviceworker.txt
+
+# Cache API (separate from HTTP cache — used by Service Workers)
+# Chrome:
+rm -rf ~/.config/google-chrome/Default/Cache/
+rm -rf ~/.config/google-chrome/Default/Code\ Cache/
+# Firefox:
+rm -rf ~/.mozilla/firefox/*.default-release/cache2/
+
+# WebSQL / localStorage / sessionStorage
+# Chrome:
+rm -rf ~/.config/google-chrome/Default/Local\ Storage/
+rm -rf ~/.config/google-chrome/Default/Session\ Storage/
+rm -rf ~/.config/google-chrome/Default/databases/
+
+# Favicon cache (leaks visited sites)
+rm -f ~/.config/google-chrome/Default/Favicons
+rm -f ~/.config/google-chrome/Default/Favicons-journal
+
+# HSTS preload cache (leaks visited HTTPS sites)
+rm -f ~/.config/google-chrome/Default/TransportSecurity
+
+# Full browser nuke (all profiles)
+rm -rf ~/.config/google-chrome/
+rm -rf ~/.mozilla/firefox/
+rm -rf ~/.config/chromium/
+```
+
+### Metadata Stripping from Uploaded Files
+
+```bash
+# EXIF data in images (GPS coordinates, camera model, software, timestamps)
+sudo apt install -y exiftool
+# View metadata
+exiftool image.jpg
+# Strip ALL metadata
+exiftool -all= image.jpg
+# Strip GPS only
+exiftool -gps:all= image.jpg
+# Batch strip entire directory
+exiftool -all= -overwrite_original -r /path/to/images/
+
+# PDF metadata (Author, Creator, Producer, timestamps)
+sudo apt install -y qpdf exiftool
+# View
+exiftool document.pdf
+pdfinfo document.pdf
+# Strip with exiftool
+exiftool -all= document.pdf
+# Strip with qpdf (also linearizes)
+qpdf --linearize --replace-input document.pdf
+# Remove XMP metadata
+exiftool -XMP:all= document.pdf
+
+# Office documents (Author, Company, Last Modified By, Revision, Comments)
+# .docx/.xlsx/.pptx are ZIP archives — metadata in docProps/core.xml and docProps/app.xml
+sudo apt install -y python3-pip
+pip3 install python-docx openpyxl
+# Quick strip with exiftool
+exiftool -all= document.docx
+# Manual approach (more thorough):
+mkdir /tmp/docwork && cd /tmp/docwork
+unzip /path/to/document.docx -d extracted/
+# Edit extracted/docProps/core.xml — remove <dc:creator>, <cp:lastModifiedBy>, etc.
+# Edit extracted/docProps/app.xml — remove <Company>, <Application>, etc.
+cd extracted && zip -r /path/to/clean.docx . && cd /tmp && rm -rf docwork
+
+# mat2 — all-in-one metadata cleaner (supports 30+ formats)
+sudo apt install -y mat2
+mat2 --show document.pdf        # show metadata
+mat2 document.pdf               # clean (creates document.cleaned.pdf)
+mat2 -i document.pdf            # clean in-place
+# Batch clean
+find /path/to/files -type f \( -name "*.pdf" -o -name "*.jpg" -o -name "*.docx" \) -exec mat2 -i {} \;
+```
+
+### Git History Rewriting for Committed Secrets
+
+```bash
+# When secrets (API keys, passwords, tokens) are committed to git,
+# they exist in EVERY clone forever — even after deletion in a new commit.
+
+# Method 1: git-filter-repo (recommended — fast and safe)
+pip3 install git-filter-repo
+
+# Remove a specific file from ALL history
+git filter-repo --invert-paths --path config/secrets.yml --force
+
+# Replace a string in ALL history (redact a leaked key)
+echo 'AKIA1234567890ABCDEF==>REDACTED_AWS_KEY' > /tmp/replacements.txt
+git filter-repo --replace-text /tmp/replacements.txt --force
+shred -uvz /tmp/replacements.txt
+
+# Remove files matching a pattern from ALL history
+git filter-repo --invert-paths --path-glob '*.env' --force
+git filter-repo --invert-paths --path-glob '*credentials*' --force
+
+# Method 2: BFG Repo Cleaner (simpler for large repos)
+# Download: https://rtyley.github.io/bfg-repo-cleaner/
+java -jar bfg.jar --delete-files "*.env" repo.git
+java -jar bfg.jar --replace-text /tmp/replacements.txt repo.git
+cd repo.git && git reflog expire --expire=now --all && git gc --prune=now --aggressive
+
+# After rewriting: force push (requires --force, coordinate with team)
+git push origin --force --all
+git push origin --force --tags
+
+# Verify the secret is gone from all history
+git log --all -p -S "AKIA1234567890" --diff-filter=D
+# Should return nothing if properly cleaned
+
+# IMPORTANT: Anyone who cloned before the rewrite still has the secret.
+# Rotate the credential IMMEDIATELY — rewriting history is damage control, not a fix.
+```

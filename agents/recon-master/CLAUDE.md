@@ -631,3 +631,331 @@ echo "Attack surface report: $REPORT"
 | ARP scan | `sudo arp-scan --localnet` |
 | SNMP walk | `snmpwalk -v2c -c public TARGET` |
 | NetBIOS scan | `nbtscan RANGE` |
+
+---
+
+## 2026 Recon Techniques
+
+### 1. Passive Recon via Certificate Transparency Logs
+CT logs are mandatory for all public TLS certs. Mine them for subdomains, internal hostnames, and infrastructure patterns.
+```bash
+TARGET="target.com"
+
+# crt.sh — the primary CT log aggregator
+curl -sS "https://crt.sh/?q=%25.$TARGET&output=json" | \
+  jq -r '.[].name_value' | sort -u | grep -v '^\*' > /tmp/ct-subs.txt
+wc -l /tmp/ct-subs.txt
+
+# certspotter — alternative CT log monitor
+curl -sS "https://api.certspotter.com/v1/issuances?domain=$TARGET&include_subdomains=true&expand=dns_names" | \
+  jq -r '.[].dns_names[]' 2>/dev/null | sort -u >> /tmp/ct-subs.txt
+
+# Look for internal/staging hostnames leaked in CT
+grep -iE '(staging|dev|test|internal|admin|vpn|uat|preprod|sandbox)' /tmp/ct-subs.txt
+
+# Monitor for NEW certificates issued (detect shadow IT, phishing)
+# certspotter watchlist: https://sslmate.com/certspotter/
+# Also: https://developers.facebook.com/tools/ct/
+```
+
+### 2. GitHub Actions Workflow File Analysis
+GitHub Actions workflows leak secrets, infrastructure details, internal URLs, and deployment targets.
+```bash
+ORG="target-org"
+
+# Search for workflow files that reference secrets
+curl -sS -H "Authorization: token $GITHUB_TOKEN" \
+  "https://api.github.com/search/code?q=org:$ORG+filename:.github/workflows+secrets" | \
+  jq -r '.items[] | "\(.repository.full_name) — \(.path)"'
+
+# Search for hardcoded URLs in workflows
+curl -sS -H "Authorization: token $GITHUB_TOKEN" \
+  "https://api.github.com/search/code?q=org:$ORG+filename:*.yml+path:.github/workflows+deploy" | \
+  jq -r '.items[].html_url'
+
+# Common secrets leaked in workflow files:
+# - AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+# - DOCKER_PASSWORD, NPM_TOKEN
+# - Internal API URLs (staging/prod endpoints)
+# - SSH keys, deployment targets, database URLs
+
+# Also check: actions/checkout with tokens, self-hosted runner configs
+grep -rE '(secrets\.|env\.|run:)' .github/workflows/*.yml 2>/dev/null
+```
+
+### 3. Shodan/Censys/ZoomEye/BinaryEdge Correlation
+Cross-reference multiple search engines to build a complete picture of the target's internet-facing infrastructure.
+```bash
+TARGET="target.com"
+TARGET_IP=$(dig +short "$TARGET" | head -1)
+
+# Shodan — search by hostname, IP, org, SSL cert
+shodan search "hostname:$TARGET" --fields ip_str,port,org,product --limit 100
+shodan host "$TARGET_IP"
+shodan search "ssl.cert.subject.cn:$TARGET" --fields ip_str,port
+
+# Censys — search by certificate, IP, service
+censys search "services.tls.certificates.leaf.names: $TARGET" --index-type hosts
+censys view "$TARGET_IP" --index-type hosts
+
+# ZoomEye — Chinese Shodan, good for APAC targets
+# curl -sS "https://api.zoomeye.org/host/search?query=hostname:$TARGET" \
+#   -H "API-KEY: YOUR_KEY" | jq .
+
+# BinaryEdge — real-time threat intelligence
+# curl -sS "https://api.binaryedge.io/v2/query/domains/subdomain/$TARGET" \
+#   -H "X-Key: YOUR_KEY" | jq .
+
+# Correlate: find all IPs from all sources, deduplicate
+cat shodan_ips.txt censys_ips.txt zoomeye_ips.txt | sort -u > all_ips.txt
+```
+
+### 4. Cloud Resource Discovery via DNS
+Discover S3 buckets, Azure blobs, and GCP storage by brute-forcing common naming patterns derived from the target.
+```bash
+TARGET="target"
+
+# S3 bucket discovery
+for prefix in $TARGET ${TARGET}-prod ${TARGET}-dev ${TARGET}-staging ${TARGET}-backup \
+  ${TARGET}-assets ${TARGET}-uploads ${TARGET}-data ${TARGET}-logs ${TARGET}-media; do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" "https://$prefix.s3.amazonaws.com")
+  [ "$code" != "404" ] && echo "S3 [$code]: $prefix.s3.amazonaws.com"
+done
+
+# Azure blob storage
+for prefix in $TARGET ${TARGET}prod ${TARGET}dev ${TARGET}backup; do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" "https://$prefix.blob.core.windows.net")
+  [ "$code" != "000" ] && echo "Azure [$code]: $prefix.blob.core.windows.net"
+done
+
+# GCP storage
+for prefix in $TARGET ${TARGET}-prod ${TARGET}-backup; do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" "https://storage.googleapis.com/$prefix")
+  [ "$code" != "404" ] && echo "GCP [$code]: storage.googleapis.com/$prefix"
+done
+
+# Also try CNAME records pointing to cloud services
+dig CNAME "assets.$TARGET.com" +short
+dig CNAME "cdn.$TARGET.com" +short
+dig CNAME "static.$TARGET.com" +short
+```
+
+### 5. JavaScript Bundle Analysis for Hidden API Endpoints
+Proven on Bumba, 1win, and REI. The JS tells you WHICH door, WHICH key, WHICH lock.
+```bash
+TARGET="https://target.com"
+
+# Extract all JS file URLs
+curl -sS "$TARGET" | grep -oE 'src="[^"]*\.js[^"]*"' | sed 's/src="//;s/"//' | sort -u > /tmp/js-urls.txt
+
+# Download all bundles
+mkdir -p /tmp/js-bundles
+while read url; do
+  # Handle relative URLs
+  [[ "$url" == /* ]] && url="$TARGET$url"
+  [[ "$url" != http* ]] && url="$TARGET/$url"
+  filename=$(echo "$url" | md5sum | cut -c1-8).js
+  curl -sS "$url" -o "/tmp/js-bundles/$filename"
+done < /tmp/js-urls.txt
+
+# Extract endpoints, secrets, API keys
+grep -rhoE '["'"'"']/api/[a-zA-Z0-9/_-]+' /tmp/js-bundles/ | sort -u
+grep -rhoE 'https?://[a-zA-Z0-9._/-]+' /tmp/js-bundles/ | sort -u
+grep -rhoiE '(api[_-]?key|client[_-]?id|secret|token|password|auth)['"'"'"\s]*[:=]['"'"'"\s]*[a-zA-Z0-9_-]{8,}' /tmp/js-bundles/
+
+# LinkFinder — automated endpoint extraction
+python3 ~/tools/LinkFinder/linkfinder.py -i "$TARGET" -o cli
+
+# Webpack bundle analysis (find source maps)
+grep -rl 'sourceMappingURL' /tmp/js-bundles/
+```
+
+### 6. Historical URL Analysis via Wayback Machine + gau
+Find removed endpoints, old API versions, debug pages, and deprecated functionality.
+```bash
+TARGET="target.com"
+
+# Wayback Machine CDX API
+curl -sS "https://web.archive.org/cdx/search/cdx?url=*.$TARGET/*&output=text&fl=original&collapse=urlkey" \
+  | sort -u > /tmp/wayback-urls.txt
+
+# gau — Get All URLs (Wayback + Common Crawl + OTX + URLScan)
+gau "$TARGET" --threads 5 --o /tmp/gau-urls.txt
+
+# Combine and filter interesting paths
+cat /tmp/wayback-urls.txt /tmp/gau-urls.txt | sort -u > /tmp/all-historical.txt
+
+# Filter for juicy endpoints
+grep -iE '\.(json|xml|yaml|yml|env|config|bak|old|sql|log|txt|conf|zip|tar|gz)' /tmp/all-historical.txt
+grep -iE '(admin|api|internal|debug|test|staging|graphql|swagger|phpinfo|wp-config)' /tmp/all-historical.txt
+grep -iE '(password|secret|token|key|credential|backup)' /tmp/all-historical.txt
+
+# Check which historical URLs still resolve
+httpx -l /tmp/all-historical.txt -mc 200,301,302,403 -silent -o /tmp/live-historical.txt
+```
+
+### 7. Favicon Hash Fingerprinting
+Favicon hashes can identify technology stacks and find related infrastructure on Shodan.
+```bash
+TARGET="https://target.com"
+
+# Download favicon and compute mmh3 hash
+python3 - <<'PY'
+import requests, mmh3, codecs
+response = requests.get("TARGET/favicon.ico", verify=False, timeout=5)
+favicon = codecs.encode(response.content, "base64")
+hash_val = mmh3.hash(favicon)
+print(f"Favicon mmh3 hash: {hash_val}")
+print(f"Shodan query: http.favicon.hash:{hash_val}")
+print(f"URL: https://www.shodan.io/search?query=http.favicon.hash%3A{hash_val}")
+PY
+
+# Common favicon hashes for known technologies:
+# Spring Boot: 116323821
+# Django: -1588574611
+# WordPress default: -1328189658
+# Grafana: 1485257654
+# Jenkins: 81586312
+
+# Search Shodan with the hash
+shodan search "http.favicon.hash:HASH_HERE" --fields ip_str,port,org
+```
+
+### 8. ASN Enumeration for Finding All IP Ranges
+Every organization has ASN(s) that contain all their IP ranges. Finding the ASN reveals infrastructure you'd never find via DNS alone.
+```bash
+TARGET="target.com"
+TARGET_IP=$(dig +short "$TARGET" | head -1)
+
+# Find ASN from IP
+whois -h whois.cymru.com " -v $TARGET_IP"
+
+# Get all prefixes announced by this ASN
+ASN="AS12345"  # replace with discovered ASN
+whois -h whois.radb.net -- "-i origin $ASN" | grep -E '^route' | awk '{print $2}' | sort -u
+
+# bgp.he.net — visual ASN info
+curl -sS "https://bgp.he.net/$ASN#_prefixes" 2>/dev/null
+
+# Also check: bgpview.io API
+curl -sS "https://api.bgpview.io/asn/${ASN#AS}/prefixes" | jq -r '.data.ipv4_prefixes[].prefix'
+
+# Scan all discovered ranges (with permission!)
+# nmap -sn CIDR_RANGE -oG /tmp/asn-hosts.txt
+```
+
+### 9. Service Worker and manifest.json Analysis
+Service workers cache API calls and reveal endpoints. manifest.json exposes app structure.
+```bash
+TARGET="https://target.com"
+
+# Check for service worker
+curl -sS "$TARGET/sw.js" 2>/dev/null | head -50
+curl -sS "$TARGET/service-worker.js" 2>/dev/null | head -50
+curl -sS "$TARGET/ngsw-worker.js" 2>/dev/null | head -50  # Angular
+
+# Extract cached URLs from service worker
+curl -sS "$TARGET/sw.js" 2>/dev/null | grep -oE '"[^"]*"' | tr -d '"' | grep -E '^/' | sort -u
+
+# Check manifest.json for app info
+curl -sS "$TARGET/manifest.json" 2>/dev/null | jq .
+curl -sS "$TARGET/site.webmanifest" 2>/dev/null | jq .
+
+# Extract scope, start_url, related_applications
+curl -sS "$TARGET/manifest.json" 2>/dev/null | jq '{scope, start_url, related_applications}'
+
+# Angular: ngsw.json contains all cached assets and API prefixes
+curl -sS "$TARGET/ngsw.json" 2>/dev/null | jq '.assetGroups[].urls'
+```
+
+### 10. Docker/Kubernetes Exposure Detection
+Misconfigured Docker daemons and Kubernetes clusters expose the entire infrastructure.
+```bash
+TARGET_IP="192.168.1.100"
+
+# Docker daemon exposed on port 2375/2376
+curl -sk "http://$TARGET_IP:2375/version" 2>/dev/null | jq .
+curl -sk "http://$TARGET_IP:2375/containers/json" 2>/dev/null | jq .
+curl -sk "https://$TARGET_IP:2376/version" 2>/dev/null | jq .
+
+# Kubernetes API server (6443, 8443, 443)
+curl -sk "https://$TARGET_IP:6443/api/v1/namespaces" 2>/dev/null | jq .
+curl -sk "https://$TARGET_IP:6443/version" 2>/dev/null | jq .
+curl -sk "https://$TARGET_IP:10250/pods" 2>/dev/null | jq .  # kubelet
+
+# etcd exposed (2379)
+curl -sk "https://$TARGET_IP:2379/v2/keys/" 2>/dev/null
+
+# Kubernetes dashboard
+curl -sk "https://$TARGET_IP:8443/api/v1/namespaces/kubernetes-dashboard/services" 2>/dev/null
+
+# Nmap scripts for container detection
+nmap --script=docker-version -p 2375,2376 "$TARGET_IP"
+nmap -p 6443,8443,10250,10255,2379 "$TARGET_IP" -sV
+```
+
+### 11. API Documentation Discovery
+Hidden API docs (Swagger, GraphQL introspection, Postman collections) are goldmines.
+```bash
+TARGET="https://target.com"
+
+# Swagger/OpenAPI endpoints
+for path in /swagger.json /swagger/v1/swagger.json /api-docs /api/swagger.json \
+  /v1/swagger.json /v2/swagger.json /v3/api-docs /openapi.json /openapi.yaml \
+  /swagger-ui.html /swagger-ui/ /docs /redoc /api/docs /api/documentation \
+  /swagger-resources /api/api-docs /_api/docs /api/apidocs; do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" "$TARGET$path" 2>/dev/null)
+  [ "$code" = "200" ] && echo "[FOUND] $TARGET$path"
+done
+
+# GraphQL introspection
+for path in /graphql /graphiql /api/graphql /v1/graphql /query /gql; do
+  result=$(curl -sk -X POST "$TARGET$path" \
+    -H "Content-Type: application/json" \
+    -d '{"query":"{ __schema { types { name } } }"}' 2>/dev/null)
+  echo "$result" | grep -q "__schema" && echo "[GRAPHQL INTROSPECTION] $TARGET$path"
+done
+
+# Postman collection discovery
+curl -sk "$TARGET/collection.json" 2>/dev/null | jq .info.name 2>/dev/null
+curl -sk "$TARGET/api/collection" 2>/dev/null | jq . 2>/dev/null
+
+# WADL (Java/JAX-RS)
+curl -sk "$TARGET/application.wadl" 2>/dev/null | head -20
+
+# gRPC reflection
+# grpcurl -plaintext $TARGET_IP:50051 list
+```
+
+### 12. TLS Certificate Chain Analysis
+TLS certificates reveal organization structure, wildcard domains, alternate names, and CA choices.
+```bash
+TARGET="target.com"
+
+# Full certificate chain dump
+openssl s_client -connect "$TARGET:443" -servername "$TARGET" </dev/null 2>/dev/null | \
+  openssl x509 -text -noout | tee /tmp/cert-analysis.txt
+
+# Extract Subject Alternative Names (SANs) — hidden domains
+openssl s_client -connect "$TARGET:443" -servername "$TARGET" </dev/null 2>/dev/null | \
+  openssl x509 -text -noout | grep -A1 "Subject Alternative Name" | \
+  grep -oE 'DNS:[a-zA-Z0-9.*-]+' | sed 's/DNS://' | sort -u
+
+# Extract organization info
+openssl s_client -connect "$TARGET:443" -servername "$TARGET" </dev/null 2>/dev/null | \
+  openssl x509 -text -noout | grep -E "(Subject:|Issuer:)"
+
+# Check certificate transparency for all certs ever issued
+# (covered in technique #1 above)
+
+# Check for wildcard certs (indicates broader infrastructure)
+openssl s_client -connect "$TARGET:443" -servername "$TARGET" </dev/null 2>/dev/null | \
+  openssl x509 -text -noout | grep -oE '\*\.[a-zA-Z0-9.-]+'
+
+# Compare cert chains across subdomains to find shared infrastructure
+for sub in www api admin portal staging; do
+  serial=$(openssl s_client -connect "$sub.$TARGET:443" -servername "$sub.$TARGET" </dev/null 2>/dev/null | \
+    openssl x509 -serial -noout 2>/dev/null)
+  echo "$sub.$TARGET → $serial"
+done
+```

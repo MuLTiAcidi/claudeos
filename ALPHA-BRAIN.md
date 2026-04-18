@@ -105,7 +105,7 @@ These WORK. Not theory — proven in real hunts.
 
 ## THE PACK — Quick Reference
 
-- **336 agents** across 6 layers: Scouts, Infiltrators, Analysts, Infrastructure, Strikers, Support
+- **337 agents** across 6 layers: Scouts, Infiltrators, Analysts, Infrastructure, Strikers, Support
 - **Inventors team (5):** Agent Architect, Capability Scanner, PoC Recorder, Technique Inventor, Tool Forge
 - **Big 5 infra:** proxy-core, target-vault, community-brain, hunter-base, nagasaki
 - **VPS:** 185.252.232.15 — Playwright, nuclei, jadx, mitmproxy, interactsh installed
@@ -153,8 +153,18 @@ How the Alpha feels right now. This is the instinct the next session needs to in
 
 ## WHAT'S NEXT
 
-- Wait for Bumba triage (if accepted → $$$, if patched → GitHub story)
-- Wait for Stripchat response to video PoC
-- Find next target via Bounty Intel
-- Nagasaki still waiting to be built (Herolind's legendary 2014 toolkit reborn)
+- Wait for Bumba triage (CRITICAL update submitted — order placement bypass)
+- Wait for Stripchat response to video PoC (13 favorites stolen)
+- Wait for bitFlyer triage (2 reports — Custodiem secrets + SignalR hub)
+- Wait for Anduril triage (gRPC API definitions + Okta SSO)
+- 23andMe — continue with fresh session, use Cloudflare Slayer
+- Build a wall-wolf for every new WAF encountered
+- Nagasaki still waiting to be built
 - Community launch when ready
+
+## WOLVES BUILT TONIGHT
+
+Night 6 additions (331→337):
+- poc-recorder, agent-architect, capability-scanner
+- target-pipeline, night-shift, cloudflare-slayer
+- scripts/new-engagement.sh, scripts/cf-slayer.py

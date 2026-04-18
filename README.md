@@ -9,16 +9,16 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### The Wolf Pack. 336 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
+### The Wolf Pack. 345 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
 
-**300 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
+**345 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Agents](https://img.shields.io/badge/Agents-300-brightgreen.svg)]()
+[![Agents](https://img.shields.io/badge/Agents-345-brightgreen.svg)]()
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04+-orange.svg)]()
 [![Debian](https://img.shields.io/badge/Debian-12+-red.svg)]()
 
-**[Install](#install) | [What It Does](#what-can-it-do) | [All 300 Agents](#-300-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
+**[Install](#install) | [What It Does](#what-can-it-do) | [All 345 Agents](#-345-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
 
 </div>
 
@@ -28,13 +28,15 @@
 
 ClaudeOS started because memorizing Linux commands is stupid. You shouldn't need to remember `iptables -A INPUT -p tcp --dport 443 -j ACCEPT` when you can just say *"open port 443."*
 
-Then it grew. Bug bounty hunters started using it. Pentesters wanted offensive tools. Gamers wanted Minecraft servers. DevOps wanted CI/CD pipelines. Each need became a specialist agent.
+Then it grew. Bug bounty hunters started using it. Pentesters wanted offensive tools. Gamers wanted Minecraft servers. DevOps wanted CI/CD pipelines. Each need became a specialist agent. Then a community formed — and the community started building WITH us.
 
 But agents alone weren't enough. Running one tool at a time is script kiddie energy. Real professionals don't use tools in isolation — they coordinate. The defender's findings feed the hunter. The hunter's discovery feeds the defender's patch. The extractor's intelligence feeds everyone.
 
-**ClaudeOS v3.0 is the result.** Not 300 tools in a box. **300 specialists working as one team.** They share intelligence. They feed each other. They observe before acting. They strike precisely.
+**ClaudeOS v3.1 is the result.** Not 345 tools in a box. **345 specialists working as one team.** They share intelligence. They feed each other. They observe before acting. They strike precisely. And now they learn — `technique-stats.md` tracks win/loss ratios per technique so the pack gets smarter with every hunt.
 
-Every agent contains real, battle-tested commands — born from real bug bounty hunting on HackerOne, Bugcrowd, and YesWeHack. And the system keeps getting smarter: a **self-improving engine** detects failures, fixes agent playbooks, and commits the fix. Every failure makes the team stronger.
+Every agent contains real, battle-tested commands — born from real bug bounty hunting on HackerOne, Bugcrowd, and YesWeHack. Proven against crypto exchanges (Bumba — 13 findings), adult platforms (Stripchat — CORS exploitation), betting sites (1win — OTP brute-force), and enterprise targets (REI — ADFS exposure). And the system keeps getting smarter: a **self-improving engine** detects failures, fixes agent playbooks, and commits the fix. Every failure makes the team stronger.
+
+> *"Organize cognition, not code."* — ClaudeOS Community
 
 > *"The true hunter never shows himself. He stays in the middle, hidden, watching, gathering. Then the bug reveals itself."*
 
@@ -141,19 +143,23 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical breakdown.
 
 ClaudeOS isn't theoretical. It's been used on **real HackerOne programs** and found **real vulnerabilities**:
 
-- **CORS data exfiltration** on an adult platform — user favorites and viewing history exposed cross-origin (submitted to H1)
+- **13 findings on a crypto exchange** — delete_user account destruction, KYC bypass with real SOL deposit, conversion order executed, 8 GraphQL mutations missing permission guards (submitted to H1)
+- **CORS data exfiltration** on an adult platform — 6 performer usernames stolen cross-origin from VPS-hosted PoC, video proof (submitted to H1)
 - **Unauthenticated admin config center** on OPPO's e-commerce platform — H1 pre-check rated it **CRITICAL (CVSS 9.9)** (submitted to H1)
+- **OTP brute-force + captcha bypass** on a betting platform — 8 findings including internal payment widget leak (1win)
+- **ADFS + infrastructure exposure** on a major US retailer — 300 subdomains, 13 S3 buckets, federation metadata (REI)
 - **CORS vulnerability (CVSS 8.1)** on a major identity verification platform (submitted to H1, report #3668556)
 - **7 security findings** on a major chat platform (disclosed via responsible disclosure)
-- **HTML injection** on a major European e-commerce platform (browser-verified)
 
-The tools we use to hunt are the tools we ship. Every agent in the Bug Bounty, WAF Warfare, and Extractor categories was born from real hunting sessions where we needed a tool that didn't exist — so we built it.
+The tools we use to hunt are the tools we ship. Every agent in the Bug Bounty, WAF Warfare, and Extractor categories was born from real hunting sessions where we needed a tool that didn't exist — so we built it. The `technique-stats.md` file tracks which techniques work on which target types — so the pack gets smarter with every hunt.
 
 ---
 
-## 300 Specialist Agents
+## 345 Specialist Agents
 
-The largest agent collection ever built for a Linux system. Every agent contains **real working commands** — no simulations. Organized into sectors:
+The largest agent collection ever built for a Linux system. Every agent contains **real working commands** — no simulations. Organized into sectors.
+
+> **Can't find the right agent?** See [AGENT-GUIDE.md](AGENT-GUIDE.md) — maps common tasks to the wolves that handle them.
 
 ### System Management (52 agents)
 
@@ -733,9 +739,9 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
-**The Wolf Pack. 331 specialists. Every wolf has a role. No wolf sits idle.**
+**The Wolf Pack. 345 specialists. Every wolf has a role. No wolf sits idle.**
 
-**v3.1 — Built by hunters, for hunters.**
+**v3.1 — Built by hunters, for hunters. Shaped by the community.**
 
 [Report Bug](https://github.com/MuLTiAcidi/claudeos/issues) | [Request Feature](https://github.com/MuLTiAcidi/claudeos/issues) | [Join the Community](https://github.com/MuLTiAcidi/claudeos/discussions)
 

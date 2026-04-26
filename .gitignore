@@ -6,3 +6,4 @@ logs/daily-report-*.md
 *.swo
 .env
 config/notifications.json
+engagements/

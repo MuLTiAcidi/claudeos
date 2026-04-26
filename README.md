@@ -9,16 +9,16 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### The Wolf Pack. 345 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
+### The Wolf Pack. 346 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
 
-**345 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
+**346 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Agents](https://img.shields.io/badge/Agents-345-brightgreen.svg)]()
+[![Agents](https://img.shields.io/badge/Agents-346-brightgreen.svg)]()
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04+-orange.svg)]()
 [![Debian](https://img.shields.io/badge/Debian-12+-red.svg)]()
 
-**[Install](#install) | [What It Does](#what-can-it-do) | [All 345 Agents](#-345-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
+**[Install](#install) | [What It Does](#what-can-it-do) | [All 346 Agents](#-346-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
 
 </div>
 
@@ -32,7 +32,7 @@ Then it grew. Bug bounty hunters started using it. Pentesters wanted offensive t
 
 But agents alone weren't enough. Running one tool at a time is script kiddie energy. Real professionals don't use tools in isolation — they coordinate. The defender's findings feed the hunter. The hunter's discovery feeds the defender's patch. The extractor's intelligence feeds everyone.
 
-**ClaudeOS v3.1 is the result.** Not 345 tools in a box. **345 specialists working as one team.** They share intelligence. They feed each other. They observe before acting. They strike precisely. And now they learn — `technique-stats.md` tracks win/loss ratios per technique so the pack gets smarter with every hunt.
+**ClaudeOS v3.1 is the result.** Not 346 tools in a box. **346 specialists working as one team.** They share intelligence. They feed each other. They observe before acting. They strike precisely. And now they learn — `technique-stats.md` tracks win/loss ratios per technique so the pack gets smarter with every hunt.
 
 Every agent contains real, battle-tested commands — born from real bug bounty hunting on HackerOne, Bugcrowd, and YesWeHack. Proven against crypto exchanges (Bumba — 13 findings), adult platforms (Stripchat — CORS exploitation), betting sites (1win — OTP brute-force), and enterprise targets (REI — ADFS exposure). And the system keeps getting smarter: a **self-improving engine** detects failures, fixes agent playbooks, and commits the fix. Every failure makes the team stronger.
 
@@ -191,6 +191,7 @@ The largest agent collection ever built for a Linux system. Every agent contains
 <details>
 <summary><b>Intelligence (4)</b> — Incident response, performance, cost, migration</summary>
 
+- **Shadow Recon** — Ghost intelligence agent. 4-phase OSINT: passive recon, code leaks, breach data, dark web. Zero trace. Builds complete dossier before pack deploys. The 007 of the pack. (400+ lines)
 - **Incident Responder** — Root cause analysis, playbooks, post-mortems
 - **Performance Tuner** — Sysctl, MySQL, Nginx, PHP-FPM optimization
 - **Cost Optimizer** — Cloud right-sizing, waste detection

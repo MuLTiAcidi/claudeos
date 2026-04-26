@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOLF ALPHA — ClaudeOS Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./static/css/wolfden.css">
+</head>
+<body>
+    <!-- Particle Background -->
+    <canvas id="particles-bg"></canvas>
+
+    <div class="hud">
+        <!-- Top HUD Bar -->
+        <header class="hud-top">
+            <div class="hud-left">
+                <span class="hud-logo">&#128058; WOLF ALPHA</span>
+                <span class="hud-version">COMMAND CENTER</span>
+            </div>
+            <div class="hud-center">
+                <div class="hud-stat">
+                    <span class="hud-stat-val" id="stat-wolves">351</span>
+                    <span class="hud-stat-lbl">WOLVES</span>
+                </div>
+                <div class="hud-stat">
+                    <span class="hud-stat-val neon-cyan" id="stat-active">0</span>
+                    <span class="hud-stat-lbl">ACTIVE</span>
+                </div>
+                <div class="hud-stat">
+                    <span class="hud-stat-val neon-red" id="stat-findings">0</span>
+                    <span class="hud-stat-lbl">FINDINGS</span>
+                </div>
+                <div class="hud-stat">
+                    <span class="hud-stat-val neon-green" id="stat-lines">218,662</span>
+                    <span class="hud-stat-lbl">LINES</span>
+                </div>
+                <div class="hud-stat elite-stat">
+                    <span class="hud-stat-val neon-pink">6</span>
+                    <span class="hud-stat-lbl">ELITE</span>
+                </div>
+            </div>
+            <div class="hud-right">
+                <span class="hud-status">
+                    <span class="status-beacon" id="status-beacon"></span>
+                    <span id="hud-status-text">STANDBY</span>
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Area -->
+        <div class="hud-main">
+            <!-- Left — Sector Buildings -->
+            <aside class="sector-bar">
+                <div class="sector-title">SECTORS</div>
+                <div id="sector-buildings"></div>
+            </aside>
+
+            <!-- Center — Wolf Field -->
+            <div class="wolf-field">
+                <canvas id="wolf-canvas"></canvas>
+            </div>
+
+            <!-- Right — Intel Panel -->
+            <aside class="intel-panel">
+                <div class="intel-tabs">
+                    <button class="intel-tab active" id="tab-wolf" onclick="wolfDen.showTab('wolf')">WOLF</button>
+                    <button class="intel-tab" id="tab-findings" onclick="wolfDen.showTab('findings')">FINDINGS <span class="findings-badge" id="findings-badge">0</span></button>
+                </div>
+                <div id="intel-content">
+                    <div class="intel-empty">
+                        <div class="intel-wolf-icon">&#128058;</div>
+                        <p>SELECT A WOLF</p>
+                        <p class="intel-sub">Click a wolf or type: hunt target.com</p>
+                    </div>
+                </div>
+                <div id="findings-panel" style="display:none">
+                    <div class="findings-header">
+                        <span class="findings-target" id="findings-target"></span>
+                        <span class="findings-count" id="findings-count">0 findings</span>
+                    </div>
+                    <div class="findings-list" id="findings-list"></div>
+                </div>
+                <div id="intel-detail" style="display:none">
+                    <div class="intel-header">
+                        <div class="intel-dot" id="intel-dot"></div>
+                        <div>
+                            <div class="intel-name" id="intel-name"></div>
+                            <div class="intel-sector" id="intel-sector"></div>
+                        </div>
+                    </div>
+                    <div class="intel-badges">
+                        <span class="badge-neon" id="intel-lines">0 lines</span>
+                        <span class="badge-neon" id="intel-status">IDLE</span>
+                    </div>
+                    <div class="intel-quote" id="intel-quote"></div>
+                    <div class="intel-code" id="intel-code"></div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Bottom — Command Chain + Activity -->
+        <footer class="hud-bottom">
+            <div class="activity-log" id="activity-log">
+                <div class="log-line"><span class="log-time">00:00</span> <span class="log-wolf">SYSTEM</span> Wolf Alpha initialized. The pack awaits your command. 0 wolves standing by.</div>
+            </div>
+            <div class="command-chain">
+                <span class="cmd-prompt">ALPHA &gt;</span>
+                <input type="text" id="cmd-input" class="cmd-input" placeholder="deploy shadow-recon target.com" autocomplete="off" spellcheck="false">
+            </div>
+        </footer>
+    </div>
+
+    <script src="./static/js/wolfden.js"></script>
+</body>
+</html>

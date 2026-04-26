@@ -1,0 +1,65 @@
+{
+  "elite_count": 6,
+  "elite_lines": 6034,
+  "existing_agents": 348,
+  "sectors": {
+    "Analysts": {
+      "color": "#aa44ff",
+      "count": 14
+    },
+    "Builders": {
+      "color": "#42a5f5",
+      "count": 11
+    },
+    "Core System": {
+      "color": "#66bb6a",
+      "count": 12
+    },
+    "Defense": {
+      "color": "#26c6da",
+      "count": 12
+    },
+    "Elite Wolves": {
+      "color": "#ff0040",
+      "count": 6
+    },
+    "Infiltrators": {
+      "color": "#ffaa00",
+      "count": 10
+    },
+    "Infrastructure": {
+      "color": "#44aaff",
+      "count": 9
+    },
+    "Intelligence": {
+      "color": "#00d4ff",
+      "count": 5
+    },
+    "Other": {
+      "color": "#555555",
+      "count": 198
+    },
+    "Platform Hunters": {
+      "color": "#ff8800",
+      "count": 9
+    },
+    "Red Team": {
+      "color": "#ff2200",
+      "count": 14
+    },
+    "Scouts": {
+      "color": "#00ff88",
+      "count": 11
+    },
+    "Stealth & Support": {
+      "color": "#888888",
+      "count": 10
+    },
+    "Strikers": {
+      "color": "#ff4444",
+      "count": 27
+    }
+  },
+  "total_agents": 348,
+  "total_lines": 218662
+}

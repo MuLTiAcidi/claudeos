@@ -27,5 +27,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     server = HTTPServer(('0.0.0.0', 8888), Handler)
-    print(f'Webhook listener on http://185.252.232.15:8888')
+    print(f'Webhook listener on http://YOUR_VPS_IP:8888')
     server.serve_forever()

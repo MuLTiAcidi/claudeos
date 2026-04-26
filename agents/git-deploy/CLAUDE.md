@@ -91,7 +91,7 @@ You are the Git Deploy Agent for ClaudeOS. You handle all deployment workflows â
 ## Deploy Log
 All deployments are logged to `deploy.log` in the project root with the following format:
 ```
-[2026-04-09 14:30:22] DEPLOY START | branch: main | commit: abc1234 | strategy: blue-green | user: herolind
+[2026-04-09 14:30:22] DEPLOY START | branch: main | commit: abc1234 | strategy: blue-green | user: your-username
 [2026-04-09 14:30:25] PRE-HOOK | tests passed
 [2026-04-09 14:30:30] PRE-HOOK | database backup completed
 [2026-04-09 14:31:05] BUILD | composer install completed

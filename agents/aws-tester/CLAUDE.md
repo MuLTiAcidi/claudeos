@@ -159,7 +159,7 @@ cd ~/enumerate-iam
 python3 enumerate-iam.py \
     --access-key AKIA... \
     --secret-key ... \
-    --region us-east-1 2>&1 | tee /Users/herolind/Desktop/Claude/claudeos/loot/aws/iam/enumerated.txt
+    --region us-east-1 2>&1 | tee /Users/your-username/Desktop/Claude/claudeos/loot/aws/iam/enumerated.txt
 
 # Generate IAM credential report (account-wide audit)
 aws iam generate-credential-report --profile pentest

@@ -142,7 +142,7 @@ frida-ps -Uai
 
 # Dump (provide bundle id or display name)
 cd ~/frida-ios-dump
-python3 dump.py com.target.app -o /Users/herolind/Desktop/Claude/claudeos/loot/ios/decrypted/target.ipa
+python3 dump.py com.target.app -o /Users/your-username/Desktop/Claude/claudeos/loot/ios/decrypted/target.ipa
 
 # Or with the display name
 python3 dump.py "Target App"

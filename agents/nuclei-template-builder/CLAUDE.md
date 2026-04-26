@@ -203,7 +203,7 @@ class NucleiTemplateBuilder:
             return False
 
 # Usage
-builder = NucleiTemplateBuilder(author="herolind")
+builder = NucleiTemplateBuilder(author="your-username")
 ```
 
 ---
@@ -420,7 +420,7 @@ Quick conversion from CLI:
 ```python
 def quick_template(path, words, severity="medium", name=None):
     """One-liner to create a template from a finding."""
-    builder = NucleiTemplateBuilder(author="herolind")
+    builder = NucleiTemplateBuilder(author="your-username")
 
     auto_name = name or f"Finding at {path}"
     template_id = re.sub(r'[^a-z0-9-]', '-', auto_name.lower()).strip('-')
@@ -495,7 +495,7 @@ id: fuxi-config-center-exposure
 
 info:
   name: Fuxi Security Config Center Exposure
-  author: herolind
+  author: your-username
   severity: high
   description: |
     Detects exposed Fuxi Security Platform configuration center

@@ -202,7 +202,7 @@ echo "============================================"
 ### Start night shift on VPS:
 ```bash
 # Deploy night shift for a target
-ssh root@185.252.232.15 << 'DEPLOY'
+ssh root@YOUR_VPS_IP << 'DEPLOY'
 # Create night shift cron jobs
 (crontab -l 2>/dev/null; cat << 'CRON'
 # ClaudeOS Night Shift — TARGET
@@ -217,12 +217,12 @@ DEPLOY
 
 ### Stop night shift:
 ```bash
-ssh root@185.252.232.15 "crontab -l | grep -v 'Night Shift' | crontab -"
+ssh root@YOUR_VPS_IP "crontab -l | grep -v 'Night Shift' | crontab -"
 ```
 
 ### Check status:
 ```bash
-ssh root@185.252.232.15 "cat /var/log/claudeos/night-shift.log | tail -20"
+ssh root@YOUR_VPS_IP "cat /var/log/claudeos/night-shift.log | tail -20"
 ```
 
 ---

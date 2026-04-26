@@ -1100,7 +1100,7 @@ Target Monitor check cycle
 - **Bounty Intel** — "Is this program's scope fresh or stale?"
 
 ### Who Target Monitor calls:
-- **Telegram Bot** — "Send this alert to Herolind's phone"
+- **Telegram Bot** — "Send this alert to the operator's phone"
 - **Target Vault** — "Store this historical state data"
 - **JS Endpoint Extractor** — "This JS file changed, extract new endpoints from the diff"
 - **Subdomain Takeover** — "CNAME removed on this subdomain, check if it's claimable"

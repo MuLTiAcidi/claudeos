@@ -1,14 +1,16 @@
 {
-  "name": "app",
+  "name": "claudeos",
   "version": "1.0.0",
-  "description": "",
+  "description": "ClaudeOS Wolf Alpha — Desktop Command Center",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "tauri": "tauri",
+    "build": "tauri build",
+    "dev": "tauri dev"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["claudeos", "ai-agents", "security", "bug-bounty"],
+  "author": "ClaudeOS Team",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

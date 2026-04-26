@@ -159,6 +159,68 @@ body {
     overflow: hidden;
 }
 
+/* Center Area — Wolf Field + Terminal stacked */
+.center-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Terminal Area */
+.terminal-area {
+    height: 320px;
+    background: #080818;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: height 0.3s ease;
+    overflow: hidden;
+}
+
+.terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 12px;
+    background: rgba(10, 10, 25, 0.95);
+    border-bottom: 1px solid var(--border);
+    min-height: 28px;
+}
+
+.terminal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--neon-green);
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+.terminal-controls { display: flex; gap: 4px; }
+
+.term-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-size: 10px;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.term-btn:hover { border-color: var(--neon-green); color: var(--neon-green); }
+
+#terminal-container {
+    flex: 1;
+    padding: 4px;
+    overflow: hidden;
+}
+
 /* Sector Bar */
 .sector-bar {
     width: 200px;

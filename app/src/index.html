@@ -6,6 +6,7 @@
     <title>WOLF ALPHA — ClaudeOS Command Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./static/css/wolfden.css">
+    <link rel="stylesheet" href="./static/vendor/xterm.css">
 </head>
 <body>
     <!-- Particle Background -->
@@ -56,9 +57,20 @@
                 <div id="sector-buildings"></div>
             </aside>
 
-            <!-- Center — Wolf Field -->
-            <div class="wolf-field">
-                <canvas id="wolf-canvas"></canvas>
+            <!-- Center — Wolf Field + Terminal -->
+            <div class="center-area">
+                <div class="wolf-field" id="wolf-field">
+                    <canvas id="wolf-canvas"></canvas>
+                </div>
+                <div class="terminal-area" id="terminal-area">
+                    <div class="terminal-header">
+                        <span class="terminal-title">TERMINAL</span>
+                        <div class="terminal-controls">
+                            <button class="term-btn" id="btn-toggle-term" title="Toggle Terminal">&#9660;</button>
+                        </div>
+                    </div>
+                    <div id="terminal-container"></div>
+                </div>
             </div>
 
             <!-- Right — Intel Panel -->
@@ -112,5 +124,6 @@
     </div>
 
     <script src="./static/js/wolfden.js"></script>
+    <script src="./static/js/terminal.js"></script>
 </body>
 </html>

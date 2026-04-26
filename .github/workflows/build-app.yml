@@ -1,0 +1,91 @@
+name: Build ClaudeOS Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            name: macOS-ARM64
+          - platform: macos-13
+            target: x86_64-apple-darwin
+            name: macOS-Intel
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            name: Linux-x64
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: Windows-x64
+
+    runs-on: ${{ matrix.platform }}
+    name: Build (${{ matrix.name }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev
+
+      - name: Install npm dependencies
+        working-directory: app
+        run: npm install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: app
+          tagName: ${{ github.ref_name }}
+          releaseName: 'ClaudeOS ${{ github.ref_name }}'
+          releaseBody: |
+            ## ClaudeOS Desktop App ${{ github.ref_name }}
+
+            **Wolf Alpha Command Center** — 351 agents, cyberpunk visual interface, integrated Claude CLI terminal.
+
+            ### Downloads
+            - **macOS (Apple Silicon):** ClaudeOS_*_aarch64.dmg
+            - **macOS (Intel):** ClaudeOS_*_x64.dmg
+            - **Windows:** ClaudeOS_*_x64-setup.exe
+            - **Linux:** ClaudeOS_*_amd64.deb / .AppImage
+
+            ### What's Inside
+            - 351 specialized AI agents with full playbooks
+            - Cyberpunk visual command center
+            - Integrated terminal (Claude CLI)
+            - Real-time wolf hunting with live findings
+            - Command chain with autocomplete
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }}

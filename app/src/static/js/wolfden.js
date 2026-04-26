@@ -373,14 +373,54 @@ class WolfDen {
         document.getElementById('intel-quote').textContent = agent.description || 'Awaiting orders...';
 
         if (agent.exists) {
-            fetch('/api/agent/' + agent.name).catch(() => null).then(r => r ? r.json() : null).then(data => {
-                if (!data) { document.getElementById('intel-code').textContent = '[ Connect to Wolf Alpha server for full playbook ]'; return; }
-                document.getElementById('intel-code').textContent =
-                    data.content.substring(0, 2000) + (data.content.length > 2000 ? '\n\n... [' + data.lines + ' lines]' : '');
+            this.loadPlaybook(agent.name).then(content => {
+                if (content) {
+                    document.getElementById('intel-code').textContent =
+                        content.substring(0, 3000) + (content.length > 3000 ? '\n\n... [' + agent.lines + ' total lines]' : '');
+                } else {
+                    document.getElementById('intel-code').textContent = '[ Playbook data not available ]';
+                }
             });
         } else {
             document.getElementById('intel-code').textContent = '[ PLAYBOOK NOT DEPLOYED ]';
         }
+    }
+
+    // Load playbook from bundled data or API
+    async loadPlaybook(name) {
+        // Try bundled playbooks first
+        if (!this._playbooks) {
+            try {
+                const paths = ['./static/playbooks.json', 'static/playbooks.json', '/static/playbooks.json'];
+                for (const path of paths) {
+                    try {
+                        const resp = await fetch(path);
+                        if (resp.ok) {
+                            const text = await resp.text();
+                            if (text.startsWith('{')) {
+                                this._playbooks = JSON.parse(text);
+                                break;
+                            }
+                        }
+                    } catch(e) { continue; }
+                }
+            } catch(e) {}
+        }
+
+        if (this._playbooks && this._playbooks[name]) {
+            return this._playbooks[name].content;
+        }
+
+        // Fallback to API
+        try {
+            const resp = await fetch('/api/agent/' + name);
+            if (resp.ok) {
+                const data = await resp.json();
+                return data.content;
+            }
+        } catch(e) {}
+
+        return null;
     }
 
     // =====================================================================
@@ -630,7 +670,7 @@ class WolfDen {
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.target !== cmdInput && !e.ctrlKey && !e.metaKey && e.key.length === 1) {
+            if (e.target !== cmdInput && !e.ctrlKey && !e.metaKey && e.key.length === 1 && !document.querySelector('.xterm-helper-textarea:focus')) {
                 cmdInput.focus();
             }
         });

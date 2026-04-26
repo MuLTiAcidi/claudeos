@@ -34,6 +34,27 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "ClaudeOS Wolf Alpha — AI Agent Command Center",
+    "longDescription": "351 specialized AI agents working as one coordinated wolf pack. Visual command center with integrated Claude CLI terminal. Cyberpunk interface for bug bounty hunting, security research, and server management.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": null
+    }
   }
 }

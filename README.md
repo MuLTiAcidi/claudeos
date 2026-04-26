@@ -73,7 +73,26 @@ $ claudeos
 
 ## Install
 
-### Quick Install (Ubuntu/Debian)
+### Desktop App — Wolf Alpha (Windows, macOS, Linux)
+
+Download the desktop app from [Releases](https://github.com/MuLTiAcidi/claudeos/releases):
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | `ClaudeOS_x.x.x_aarch64.dmg` |
+| macOS (Intel) | `ClaudeOS_x.x.x_x64.dmg` |
+| Windows | `ClaudeOS_x.x.x_x64-setup.exe` |
+| Linux (Debian/Ubuntu) | `ClaudeOS_x.x.x_amd64.deb` |
+| Linux (Universal) | `ClaudeOS_x.x.x_amd64.AppImage` |
+
+The desktop app includes:
+- Cyberpunk visual command center (Wolf Alpha)
+- Integrated Claude CLI terminal
+- All 351 agent playbooks bundled
+- Real-time wolf hunting with live findings
+- Command chain with autocomplete
+
+### CLI Install (Ubuntu/Debian Servers)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 ```
@@ -155,7 +174,7 @@ The tools we use to hunt are the tools we ship. Every agent in the Bug Bounty, W
 
 ---
 
-## 345 Specialist Agents
+## 351 Specialist Agents
 
 The largest agent collection ever built for a Linux system. Every agent contains **real working commands** — no simulations. Organized into sectors.
 
@@ -745,7 +764,7 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
-**The Wolf Pack. 345 specialists. Every wolf has a role. No wolf sits idle.**
+**The Wolf Pack. 351 specialists. Every wolf has a role. No wolf sits idle.**
 
 **v3.1 — Built by hunters, for hunters. Shaped by the community.**
 

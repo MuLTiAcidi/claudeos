@@ -59,7 +59,7 @@ def logout():
 
 @app.before_request
 def require_login():
-    allowed = ("login", "static")
+    allowed = ("login", "static", "api_push_finding", "api_push_start", "api_push_end", "api_findings")
     if request.endpoint and request.endpoint not in allowed and not session.get("authenticated"):
         return redirect(url_for("login"))
 
@@ -496,6 +496,86 @@ def api_findings():
             "count": len(hunt_findings),
             "findings": list(hunt_findings),
         })
+
+
+# ---------------------------------------------------------------------------
+# CLI Bridge — Push findings from Claude CLI to dashboard
+# ---------------------------------------------------------------------------
+CLI_AUTH_TOKEN = os.environ.get("CLI_TOKEN", "wolfpack-cli-bridge-2026")
+
+
+@app.route("/api/push", methods=["POST"])
+def api_push_finding():
+    """Receive findings from Claude CLI session."""
+    global hunt_target, hunt_active
+
+    # Auth check
+    token = request.headers.get("X-CLI-Token", "")
+    if not hmac.compare_digest(token, CLI_AUTH_TOKEN):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    wolf = data.get("wolf", "CLI")
+    category = data.get("category", "Finding")
+    finding = data.get("data", "")
+    target = data.get("target", "")
+
+    if target and not hunt_target:
+        hunt_target = target
+        hunt_active = True
+
+    with hunt_lock:
+        hunt_findings.append({
+            "wolf": wolf,
+            "category": category,
+            "data": finding,
+            "time": __import__('datetime').datetime.now().strftime("%H:%M:%S"),
+        })
+
+    return jsonify({"status": "ok", "count": len(hunt_findings)})
+
+
+@app.route("/api/push/start", methods=["POST"])
+def api_push_start():
+    """Start a new hunt from CLI."""
+    global hunt_target, hunt_active, hunt_findings
+
+    token = request.headers.get("X-CLI-Token", "")
+    if not hmac.compare_digest(token, CLI_AUTH_TOKEN):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    hunt_target = data.get("target", "unknown")
+    hunt_active = True
+    with hunt_lock:
+        hunt_findings = []
+    hunt_findings.append({
+        "wolf": "ALPHA",
+        "category": "Hunt Started",
+        "data": f"Target: {hunt_target} (via CLI)",
+        "time": __import__('datetime').datetime.now().strftime("%H:%M:%S"),
+    })
+    return jsonify({"status": "Hunt started", "target": hunt_target})
+
+
+@app.route("/api/push/end", methods=["POST"])
+def api_push_end():
+    """End a hunt from CLI."""
+    global hunt_active
+
+    token = request.headers.get("X-CLI-Token", "")
+    if not hmac.compare_digest(token, CLI_AUTH_TOKEN):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    hunt_active = False
+    with hunt_lock:
+        hunt_findings.append({
+            "wolf": "ALPHA",
+            "category": "Hunt Complete",
+            "data": f"{len(hunt_findings)} findings collected",
+            "time": __import__('datetime').datetime.now().strftime("%H:%M:%S"),
+        })
+    return jsonify({"status": "Hunt ended", "count": len(hunt_findings)})
 
 
 if __name__ == "__main__":

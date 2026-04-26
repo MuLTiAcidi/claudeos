@@ -120,6 +120,9 @@ class WolfDen {
         this.renderSectorPanel();
         this.animate();
         this.log('SYSTEM', `${this.agents.length} wolves loaded across ${this.sectorOrder.length} sectors.`);
+
+        // Auto-poll for CLI findings every 2 seconds
+        this.startAutoPolling();
     }
 
     buildSectors() {
@@ -730,6 +733,26 @@ class WolfDen {
     }
 
     // Findings polling
+    startAutoPolling() {
+        // Check for CLI-pushed findings every 2 seconds
+        setInterval(() => {
+            fetch('/api/findings').then(r => r.json()).then(data => {
+                if (data.count > 0 && data.count !== this._lastAutoCount) {
+                    this._lastAutoCount = data.count;
+                    document.getElementById('findings-badge').textContent = data.count;
+                    document.getElementById('stat-findings').textContent = data.count;
+
+                    // If not already polling, start showing findings
+                    if (!this.findingsInterval) {
+                        this.showTab('findings');
+                        this.startFindingsPolling();
+                    }
+                }
+            }).catch(() => {});
+        }, 2000);
+        this._lastAutoCount = 0;
+    }
+
     startFindingsPolling() {
         if (this.findingsInterval) clearInterval(this.findingsInterval);
         this.lastFindingCount = 0;

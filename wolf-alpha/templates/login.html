@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOLF ALPHA — Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #050510;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .login-box {
+            background: rgba(10, 10, 25, 0.9);
+            border: 1px solid rgba(100, 60, 255, 0.3);
+            border-radius: 12px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(156, 39, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .login-icon { font-size: 48px; margin-bottom: 16px; }
+        .login-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            color: #ff0066;
+            text-shadow: 0 0 20px rgba(255, 0, 102, 0.4);
+            letter-spacing: 3px;
+            margin-bottom: 6px;
+        }
+        .login-sub {
+            font-size: 11px;
+            color: #4a4a6a;
+            letter-spacing: 2px;
+            margin-bottom: 32px;
+        }
+        .login-input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(100, 60, 255, 0.2);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: #00e5ff;
+            text-align: center;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            caret-color: #ff0066;
+            outline: none;
+        }
+        .login-input:focus {
+            border-color: #9c27ff;
+            box-shadow: 0 0 15px rgba(156, 39, 255, 0.3);
+        }
+        .login-input::placeholder { color: #2a2a4a; letter-spacing: 1px; }
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ff0066, #9c27ff);
+            border: none;
+            border-radius: 6px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .login-btn:hover {
+            box-shadow: 0 0 25px rgba(255, 0, 102, 0.4);
+            transform: translateY(-1px);
+        }
+        .login-error {
+            color: #ff2244;
+            font-size: 12px;
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="login-icon">&#128058;</div>
+        <h1 class="login-title">WOLF ALPHA</h1>
+        <p class="login-sub">COMMAND CENTER ACCESS</p>
+        {% if error %}
+        <div class="login-error">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <input type="password" name="password" class="login-input" placeholder="Enter password" autofocus required>
+            <button type="submit" class="login-btn">AUTHENTICATE</button>
+        </form>
+    </div>
+</body>
+</html>

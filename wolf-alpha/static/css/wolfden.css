@@ -126,7 +126,7 @@ body {
     margin-top: 2px;
 }
 
-.hud-right { display: flex; align-items: center; }
+.hud-right { display: flex; align-items: center; gap: 16px; }
 
 .hud-status {
     display: flex;

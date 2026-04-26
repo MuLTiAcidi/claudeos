@@ -4,10 +4,13 @@ The Alpha's throne. See every wolf. Command every hunt. Lead the pack.
 """
 
 import os
+import hmac
 import json
 import glob
+import secrets
 from pathlib import Path
-from flask import Flask, render_template, jsonify, request
+from functools import wraps
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 
 BASE_DIR = Path(__file__).resolve().parent
 AGENTS_DIR = BASE_DIR.parent / "agents"
@@ -17,7 +20,48 @@ app = Flask(
     template_folder=str(BASE_DIR / "templates"),
     static_folder=str(BASE_DIR / "static"),
 )
-app.secret_key = "wolfden-claudeos-2026"
+
+# Persistent secret key
+SECRET_KEY_FILE = BASE_DIR / ".secret_key"
+if SECRET_KEY_FILE.exists():
+    app.secret_key = SECRET_KEY_FILE.read_text().strip()
+else:
+    app.secret_key = secrets.token_hex(32)
+    SECRET_KEY_FILE.write_text(app.secret_key)
+
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Password — set via env or default
+ALPHA_PASSWORD = os.environ.get("ALPHA_PASSWORD", "wolfpack351")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("authenticated"):
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        pwd = request.form.get("password", "")
+        if hmac.compare_digest(pwd, ALPHA_PASSWORD):
+            session["authenticated"] = True
+            session.permanent = True
+            return redirect(url_for("index"), code=303)
+        else:
+            return render_template("login.html", error="Wrong password")
+    return render_template("login.html", error=None)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.before_request
+def require_login():
+    allowed = ("login", "static")
+    if request.endpoint and request.endpoint not in allowed and not session.get("authenticated"):
+        return redirect(url_for("login"))
 
 
 def scan_agents():

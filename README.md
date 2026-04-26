@@ -9,16 +9,16 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### The Wolf Pack. 362 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
+### The Wolf Pack. 363 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
 
-**362 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
+**363 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Agents](https://img.shields.io/badge/Agents-362-brightgreen.svg)]()
+[![Agents](https://img.shields.io/badge/Agents-363-brightgreen.svg)]()
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04+-orange.svg)]()
 [![Debian](https://img.shields.io/badge/Debian-12+-red.svg)]()
 
-**[Install](#install) | [What It Does](#what-can-it-do) | [All 362 Agents](#-351-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
+**[Install](#install) | [What It Does](#what-can-it-do) | [All 363 Agents](#-351-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
 
 </div>
 

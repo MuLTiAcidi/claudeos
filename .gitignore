@@ -7,3 +7,5 @@ logs/daily-report-*.md
 .env
 config/notifications.json
 engagements/
+package.json
+package-lock.json

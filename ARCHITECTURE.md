@@ -10,7 +10,7 @@ ClaudeOS has **4 layers**:
 
 1. **You** — Talk in plain English
 2. **Orchestrator** — One main "brain" (`claudeos/CLAUDE.md`) that picks the right specialist
-3. **Specialists** — 200 expert playbooks (`agents/{name}/CLAUDE.md`) with real commands
+3. **Specialists** — 364 expert playbooks (`agents/{name}/CLAUDE.md`) with real commands
 4. **Executor** — Claude Code's bash tool that actually runs the commands on your server
 
 There is **no daemon, no message bus, no IPC**. Every "agent" is a Markdown file containing a specialist's playbook. The orchestrator loads the right playbook on demand and executes commands directly through bash.
@@ -38,7 +38,7 @@ There is **no daemon, no message bus, no IPC**. Every "agent" is a Markdown file
 │              └──────────────────────────┘                        │
 │                                                                  │
 │  • Reads your request                                            │
-│  • Knows about all 253 specialist agents                         │
+│  • Knows about all 364 specialist agents                         │
 │  • Picks which agent(s) to invoke                                │
 │  • Coordinates multi-agent workflows                             │
 │  • Asks for confirmation before destructive actions              │
@@ -59,7 +59,7 @@ There is **no daemon, no message bus, no IPC**. Every "agent" is a Markdown file
 │  │  recon work      │ │  CVE scanning    │ │  pro reports     │  │
 │  └──────────────────┘ └──────────────────┘ └──────────────────┘  │
 │                                                                  │
-│            … 253 specialist playbooks total …                    │
+│            … 364 specialist playbooks total …                    │
 │                                                                  │
 │  Each playbook contains:                                         │
 │  • Safety rules                                                  │
@@ -107,7 +107,7 @@ You. The human typing requests in plain English. You don't need to know which ag
 
 The "brain" of ClaudeOS. This is a single Markdown file at the root of the project that defines:
 - Who ClaudeOS is and how it should behave
-- The full directory of all 253 specialist agents
+- The full directory of all 364 specialist agents
 - How to pick agents for different tasks
 - Multi-agent workflow patterns
 - Safety rules and authorization checks
@@ -149,7 +149,7 @@ When the orchestrator "invokes" an agent, what actually happens is:
 4. Claude uses that knowledge to construct bash commands
 5. Commands are sent to Layer 4 for execution
 
-#### Agent categories (200 total)
+#### Agent categories (364 total)
 
 | Category | Agents | Purpose |
 |---|---|---|
@@ -262,12 +262,12 @@ User: *"My server is down, fix it"*
 ├── README.md                    # User-facing docs
 ├── ARCHITECTURE.md              # This file
 │
-├── agents/                      # Layer 3: 253 specialists
+├── agents/                      # Layer 3: 364 specialists
 │   ├── vulnerability-scanner/
 │   │   └── CLAUDE.md           # Specialist playbook
 │   ├── jwt-hunter/
 │   │   └── CLAUDE.md
-│   └── ... (253 agents)
+│   └── ... (364 agents)
 │
 ├── config/                      # Configuration
 │   ├── defaults.json
@@ -399,7 +399,7 @@ A: No. Agents are just Markdown files. They are loaded on demand when the orches
 A: Yes — the orchestrator can invoke multiple agents in sequence, and the bash tool can run commands in the background. But there's no agent process running independently.
 
 **Q: How does ClaudeOS know which agent to pick?**
-A: The orchestrator (`claudeos/CLAUDE.md`) has a directory of all 200 agents with their specialties. It matches your request to the right specialist using natural language understanding.
+A: The orchestrator (`claudeos/CLAUDE.md`) has a directory of all 364 agents with their specialties. It matches your request to the right specialist using natural language understanding.
 
 **Q: What if the orchestrator picks the wrong agent?**
 A: You can call agents by name: *"use the jwt-hunter agent on this token"*. The orchestrator will load that specific playbook.
@@ -423,6 +423,6 @@ That simplicity is the design. It makes ClaudeOS:
 - **Auditable** — read any file to know what it does
 - **Hackable** — add or modify agents in seconds
 - **Trustworthy** — nothing runs in the background without your knowledge
-- **Powerful** — 253 specialists at your fingertips with one natural language interface
+- **Powerful** — 364 specialists at your fingertips with one natural language interface
 
 That's the whole architecture.

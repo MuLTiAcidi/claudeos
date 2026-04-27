@@ -1,5 +1,5 @@
 #!/bin/bash
-# ClaudeOS v3.1 Universal Installer — 345 Wolves
+# ClaudeOS v3.1 Universal Installer — 364 Wolves
 # Usage: curl -fsSL https://raw.githubusercontent.com/MuLTiAcidi/claudeos/main/install.sh | sudo bash
 # Options:
 #   --server       Server Edition (default)
@@ -58,7 +58,7 @@ echo -e "${BLUE} ██║     ██║     ██╔══██║██║  
 echo -e "${BLUE} ╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝███████╗╚██████╔╝███████║${NC}"
 echo -e "${BLUE}  ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝${NC}"
 echo ""
-echo -e "${WHITE}${BOLD}  The Wolf Pack — 345 Agents — v3.1${NC}"
+echo -e "${WHITE}${BOLD}  The Wolf Pack — 364 Agents — v3.1${NC}"
 echo -e "${WHITE}  Edition: ${CYAN}${EDITION}${NC}"
 echo ""
 
@@ -205,7 +205,7 @@ fi
 # STEP 5: CLAUDEOS
 # ─────────────────────────────────────────────
 
-step "Installing ClaudeOS (345 agents)..."
+step "Installing ClaudeOS (364 agents)..."
 
 if [ -d "$CLAUDEOS_DIR/.git" ]; then
     cd "$CLAUDEOS_DIR" && git pull -q
@@ -305,7 +305,7 @@ STATE
         ;;
     help|--help|-h)
         echo ""
-        echo "  ClaudeOS v3.1 — The Wolf Pack (345 Agents)"
+        echo "  ClaudeOS v3.1 — The Wolf Pack (364 Agents)"
         echo ""
         echo "  Usage: claudeos [command]"
         echo ""

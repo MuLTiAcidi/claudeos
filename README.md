@@ -9,16 +9,16 @@
   ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝╚══════╝
 ```
 
-### The Wolf Pack. 363 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
+### The Wolf Pack. 364 Agents. Every Wolf Has a Role. No Wolf Sits Idle.
 
-**363 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
+**364 AI specialists working as one coordinated unit. Defenders, hunters, hackers, builders — all sharing intelligence, all working together. The first AI system that doesn't just run tools — it thinks like a team.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Agents](https://img.shields.io/badge/Agents-363-brightgreen.svg)]()
+[![Agents](https://img.shields.io/badge/Agents-364-brightgreen.svg)]()
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04+-orange.svg)]()
 [![Debian](https://img.shields.io/badge/Debian-12+-red.svg)]()
 
-**[Install](#install) | [What It Does](#what-can-it-do) | [All 363 Agents](#-351-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
+**[Install](#install) | [What It Does](#what-can-it-do) | [All 364 Agents](#-364-specialist-agents) | [Bug Bounty](#-bug-bounty--proven-in-the-field) | [WAF Warfare](#-waf-warfare--11-agents) | [Pro Features](#-pro-features) | [Architecture](#architecture)**
 
 </div>
 
@@ -32,7 +32,7 @@ Then it grew. Bug bounty hunters started using it. Pentesters wanted offensive t
 
 But agents alone weren't enough. Running one tool at a time is script kiddie energy. Real professionals don't use tools in isolation — they coordinate. The defender's findings feed the hunter. The hunter's discovery feeds the defender's patch. The extractor's intelligence feeds everyone.
 
-**ClaudeOS v3.1 is the result.** Not 351 tools in a box. **362 specialists working as one team.** They share intelligence. They feed each other. They observe before acting. They strike precisely. And now they learn — `technique-stats.md` tracks win/loss ratios per technique so the pack gets smarter with every hunt.
+**ClaudeOS v3.1 is the result.** Not 361 tools in a box. **364 specialists working as one team.** They share intelligence. They feed each other. They observe before acting. They strike precisely. And now they learn — `technique-stats.md` tracks win/loss ratios per technique so the pack gets smarter with every hunt.
 
 Every agent contains real, battle-tested commands — born from real bug bounty hunting on HackerOne, Bugcrowd, and YesWeHack. Proven against crypto exchanges (Bumba — 13 findings), adult platforms (Stripchat — CORS exploitation), betting sites (1win — OTP brute-force), and enterprise targets (REI — ADFS exposure). And the system keeps getting smarter: a **self-improving engine** detects failures, fixes agent playbooks, and commits the fix. Every failure makes the team stronger.
 
@@ -88,7 +88,7 @@ Download the desktop app from [Releases](https://github.com/MuLTiAcidi/claudeos/
 The desktop app includes:
 - Cyberpunk visual command center (Wolf Alpha)
 - Integrated Claude CLI terminal
-- All 351 agent playbooks bundled
+- All 364 agent playbooks bundled
 - Real-time wolf hunting with live findings
 - Command chain with autocomplete
 
@@ -141,7 +141,7 @@ ClaudeOS has **4 layers**. No daemons. No message buses. Everything is Markdown 
 └──────────────────────┬────────────────────────────────┘
                        ▼
 ┌───────────────────────────────────────────────────────┐
-│  300 SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)     │
+│  364 SPECIALIST AGENTS  (agents/{name}/CLAUDE.md)     │
 │  Each one is a Markdown playbook with real commands   │
 │  Loaded on demand. Nothing runs in the background.   │
 └──────────────────────┬────────────────────────────────┘
@@ -174,7 +174,7 @@ The tools we use to hunt are the tools we ship. Every agent in the Bug Bounty, W
 
 ---
 
-## 351 Specialist Agents
+## 364 Specialist Agents
 
 The largest agent collection ever built for a Linux system. Every agent contains **real working commands** — no simulations. Organized into sectors.
 
@@ -668,7 +668,7 @@ The largest agent collection ever built for a Linux system. Every agent contains
 | Command | What It Does |
 |---|---|
 | `claudeos wizard` | First-run setup wizard |
-| `claudeos agents` | Browse and search all 331 agents by category |
+| `claudeos agents` | Browse and search all 364 agents by category |
 | `claudeos workflow` | Pre-built multi-agent workflows (bug-bounty, recon, wordpress, etc.) |
 | `claudeos engagement` | Manage bug bounty/pentest workspaces |
 | `claudeos findings` | SQLite findings tracker with CVSS and payouts |
@@ -732,7 +732,7 @@ For paid pentest engagements with legal requirements, enable Pro Mode for per-en
 ```bash
 claudeos              # Open AI assistant
 claudeos status       # System health dashboard
-claudeos agents       # Browse all 331 agents
+claudeos agents       # Browse all 364 agents
 claudeos quickscan    # Full recon pipeline
 claudeos workflow     # Multi-agent workflows
 claudeos engagement   # Manage workspaces
@@ -764,7 +764,7 @@ MIT License — use it, modify it, share it.
 
 <div align="center">
 
-**The Wolf Pack. 362 specialists. Every wolf has a role. No wolf sits idle.**
+**The Wolf Pack. 364 specialists. Every wolf has a role. No wolf sits idle.**
 
 **v3.1 — Built by hunters, for hunters. Shaped by the community.**
 

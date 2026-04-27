@@ -327,7 +327,7 @@ This is not automation. This is intelligence.
 
 ## Origin
 
-Nagasaki was first built in 2014 as a comprehensive hacking toolkit — password cracking, WiFi, OSINT, database searching, account bypass, all in one GUI+CLI tool. 12 years later, it's reborn inside ClaudeOS with 300 AI agents behind it instead of standalone tools.
+Nagasaki was first built in 2014 as a comprehensive hacking toolkit — password cracking, WiFi, OSINT, database searching, account bypass, all in one GUI+CLI tool. 12 years later, it's reborn inside ClaudeOS with 364 AI agents behind it instead of standalone tools.
 
 Same spirit. Same name. 12 years of evolution.
 

@@ -72,7 +72,7 @@ jobs:
           releaseBody: |
             ## ClaudeOS Desktop App ${{ github.ref_name }}
 
-            **Wolf Alpha Command Center** — 351 agents, cyberpunk visual interface, integrated Claude CLI terminal.
+            **Wolf Alpha Command Center** — 364 agents, cyberpunk visual interface, integrated Claude CLI terminal.
 
             ### Downloads
             - **macOS (Apple Silicon):** ClaudeOS_*_aarch64.dmg
@@ -81,7 +81,7 @@ jobs:
             - **Linux:** ClaudeOS_*_amd64.deb / .AppImage
 
             ### What's Inside
-            - 351 specialized AI agents with full playbooks
+            - 364 specialized AI agents with full playbooks
             - Cyberpunk visual command center
             - Integrated terminal (Claude CLI)
             - Real-time wolf hunting with live findings
